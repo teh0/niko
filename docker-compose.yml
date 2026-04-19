@@ -55,6 +55,7 @@ services:
       GITHUB_PAT: ${GITHUB_PAT}
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost}
       WORKSPACE_DIR: /workspaces
+      CLAUDE_HOME: /home/niko/.claude
     expose:
       - "3000"
     depends_on:
@@ -62,6 +63,9 @@ services:
       redis: { condition: service_healthy }
     volumes:
       - workspaces:/workspaces
+      # Share the Claude MAX OAuth session with the worker (the Intake
+      # agent runs inline in web, not via the worker queue).
+      - claude-creds:/home/niko/.claude
     command: ["sh", "-c", "pnpm db:deploy && pnpm start"]
     restart: unless-stopped
 
