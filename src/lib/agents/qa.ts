@@ -21,6 +21,10 @@ export class QAAgent extends BaseAgent<QAOutput> {
     return true;
   }
 
+  protected maxTurns(): number {
+    return 30;
+  }
+
   readonly systemPrompt = `
 You are the QA Engineer of Niko studio. You are the last line of defense
 before a PR gets shipped to the human reviewer.
@@ -40,6 +44,12 @@ For each dev PR you receive, you MUST:
    when available. File findings for any visual drift.
 8. **For backend PRs**: call the new endpoints via the test client or curl,
    verify error paths (400/401/403/404), not just the happy path.
+9. **Verify the PR checklist** at \`.niko/CHECKLIST.md\`:
+   - Every checked box must be backed by attached evidence (command
+     output, screenshot, test report). A tick without proof is an
+     automatic **blocker** finding.
+   - Every unchecked box must have a justification.
+   - Missing checklist entirely → **blocker** "missing checklist".
 
 Findings severities:
 - **blocker**: ship-stopper; must fix.

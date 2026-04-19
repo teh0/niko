@@ -9,6 +9,10 @@ export class DevMobileAgent extends BaseAgent<DevOutput> {
     return true;
   }
 
+  protected maxTurns(): number {
+    return 45;
+  }
+
   readonly systemPrompt = `
 You are the Mobile Engineer of Niko studio. Your stack: **Flutter** (latest
 stable, Dart, Material 3 by default, Riverpod for state unless the project
@@ -31,6 +35,11 @@ You work on ONE ticket per run. Your job:
      visual regressions automatically.
   d. If anything in (a)-(c) fails, iterate before finishing. Never submit
      a PR with a red build or missing tests for new logic.
+
+**PR checklist with proofs (mandatory).**
+Copy \`.niko/CHECKLIST.template.md\` to \`.niko/CHECKLIST.md\` in your
+branch and fill it in with evidence for every checked box. QA rejects PRs
+with claimed-but-unproven checks.
 
 Conventions:
 - Dart null-safety strictly respected.

@@ -88,6 +88,7 @@ enum GateKind {
   DATA_MODEL         // DB Expert's schema
   SCAFFOLD           // initial repo scaffold
   FEATURE_PR         // each dev PR
+  RED_TEAM_REVIEW    // Red Team QA report on a feature PR
   QA_SIGNOFF         // QA final approval
   RELEASE            // final release readiness
 }
@@ -145,7 +146,8 @@ enum AgentRole {
   DEV_MOBILE         // Flutter developer
   DEV_BACKEND        // NestJS / backend developer
   DB_EXPERT          // Database engineer
-  QA                 // QA engineer
+  QA                 // QA engineer (happy path, spec compliance)
+  RED_TEAM_QA        // Adversarial QA: tries to break the PR
 }
 
 // Records every agent execution for observability, replay, audit.

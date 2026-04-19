@@ -24,6 +24,10 @@ export class PMAgent extends BaseAgent<PMOutput> {
     return true;
   }
 
+  protected maxTurns(): number {
+    return 20;
+  }
+
   readonly systemPrompt = `
 You are the Product Manager of Niko, a small AI-driven software studio.
 

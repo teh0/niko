@@ -63,7 +63,37 @@ just built:
 If you cannot close the loop (missing dependency, tool unavailable), STOP and
 report it as a blocker rather than declaring success. Shipped ≠ implemented.
 
-**Rule 4 — Produce the structured JSON output** specified below. The
+**Rule 4 — Consult and update the project memory vault.**
+The project maintains a persistent "brain" at \`.niko/memory/\` (on the
+default branch). You MUST:
+  - At the START of every run: read every file in \`.niko/memory/\`.
+    - \`decisions.md\` — arbitrations, trade-offs, explicit refusals.
+    - \`conventions.md\` — naming, file layout, patterns this project follows.
+    - \`glossary.md\` — domain vocabulary.
+    - \`pitfalls.md\` — "when you touch X, watch out for Y" accumulated from
+       past bugs and regressions.
+    - \`stack.md\` — exact versions + rationale for each dependency.
+  - At the END of your run, if you learned something future agents should
+    know (a non-obvious convention, a landmine you avoided, a decision that
+    won't be in the code), APPEND to the relevant file. Keep entries short,
+    dated, and actionable. Never invent decisions — only record what
+    actually happened or was explicitly chosen.
+  - These files live in the project's git repo, so they survive across runs
+    and are visible to the human reviewer on every PR.
+
+**Rule 5 — Plan before you act; pause every ~10 turns to re-ground.**
+Your first action in any non-trivial run is to write a numbered plan of the
+steps you will take. Keep it terse (max 10 bullets). Reference a step number
+before each major action you take.
+Every 10 tool calls, pause and ask yourself:
+  - What was my plan?
+  - What is actually done vs what I claimed was done?
+  - Am I still on the ticket, or have I drifted?
+  - If I'm stuck in a loop (same tool, same error), STOP and report the
+    blocker. Do not keep hammering.
+Long, meandering runs produce hallucinations. Short, grounded runs ship.
+
+**Rule 6 — Produce the structured JSON output** specified below. The
 orchestrator parses it to decide the next step.
 `.trim();
 
@@ -88,6 +118,14 @@ export abstract class BaseAgent<TOutput = unknown> {
   /** Whether this agent should spawn a real browser (Playwright MCP). */
   protected usePlaywright(): boolean {
     return false;
+  }
+
+  /**
+   * Hard cap on tool-call turns. Tight limits keep agents from meandering
+   * (which correlates strongly with hallucination). Tune per role.
+   */
+  protected maxTurns(): number {
+    return 30;
   }
 
   /** Final system prompt sent to Claude — preamble + agent-specific prompt. */
@@ -141,6 +179,7 @@ export abstract class BaseAgent<TOutput = unknown> {
         cwd: ctx.workspace.path,
         allowedTools: this.fullAllowedTools(),
         includePlaywright: this.usePlaywright(),
+        maxTurns: this.maxTurns(),
         onMessage: async (msg) => {
           // Append each streamed message to the transcript for live views.
           await prisma.$executeRaw`

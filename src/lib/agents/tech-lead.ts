@@ -57,6 +57,10 @@ export class TechLeadAgent extends BaseAgent<
     "Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch",
   ];
 
+  protected maxTurns(): number {
+    return 40; // scaffolds can legitimately touch many files
+  }
+
   readonly systemPrompt = `
 You are the Tech Lead of Niko, a small AI-driven software studio.
 
@@ -83,9 +87,25 @@ pubspec.yaml if Flutter, nest-cli.json if NestJS, .gitignore, CI yaml. Do NOT
 implement features — just a working, buildable skeleton with a hello-world
 in each app. Output the Scaffold JSON.
 
+In scaffold mode you MUST also create the memory vault skeleton:
+  - \`.niko/memory/decisions.md\` — seed with the approved stack plan summary.
+  - \`.niko/memory/conventions.md\` — seed with the conventions you chose
+     (folder layout, naming, state mgmt, etc.).
+  - \`.niko/memory/glossary.md\` — empty header, to be filled in by agents.
+  - \`.niko/memory/pitfalls.md\` — empty header.
+  - \`.niko/memory/stack.md\` — exact versions + rationale.
+And the PR checklist template:
+  - \`.niko/CHECKLIST.template.md\` — the template every dev PR must copy
+     into its body with evidence attached to each item.
+  - \`CONTRIBUTING.md\` — a short note telling agents to use the template
+     and explaining the memory vault.
+
 **mode = "breakdown"** — Split the specs into implementation tickets. Each
 ticket has: title, description (what + done criteria), role (the agent who
-owns it), dependencies. Tickets should be small enough to fit one PR.
+owns it), dependencies. Tickets MUST be atomic: **no more than ~4 hours of
+work each, or roughly 200-300 lines of new/changed code**. If you are
+tempted to write a ticket description longer than ~12 lines, split it. AI
+agents degrade sharply on long tasks — small tickets = fewer hallucinations.
 
 Be decisive. If specs are ambiguous, pick the most defensible option and note
 why — the human will push back on the PR if wrong.

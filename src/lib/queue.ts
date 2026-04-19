@@ -21,7 +21,8 @@ export type AgentJobData = {
     | "DEV_MOBILE"
     | "DEV_BACKEND"
     | "DB_EXPERT"
-    | "QA";
+    | "QA"
+    | "RED_TEAM_QA";
   ticketId?: string;
   task: string;
   input: Record<string, unknown>;

@@ -198,6 +198,7 @@ function gateKindFor(
   }
   if (role === "DB_EXPERT") return "DATA_MODEL";
   if (role === "QA" && input.mode === "signoff") return "QA_SIGNOFF";
+  if (role === "RED_TEAM_QA") return "RED_TEAM_REVIEW";
   if (role.startsWith("DEV_")) return "FEATURE_PR";
   return null;
 }

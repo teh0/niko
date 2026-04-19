@@ -121,17 +121,51 @@ export async function decideNext(projectId: string): Promise<NextAction> {
     };
   }
 
-  // 7. Any open PR needing QA?
-  const prsNeedingQA = await prisma.pullRequest.findMany({
+  // 7. Any open PR needing QA, then Red Team, in order.
+  const openPRs = await prisma.pullRequest.findMany({
     where: { projectId, state: "open" },
+    include: { project: false },
   });
-  if (prsNeedingQA.length > 0) {
-    return {
-      type: "run_agent",
-      role: "QA",
-      task: `Review pull request #${prsNeedingQA[0].number}.`,
-      input: { prNumber: prsNeedingQA[0].number },
-    };
+  for (const pr of openPRs) {
+    // Has QA happened on this PR yet?
+    const qaRun = await prisma.agentRun.findFirst({
+      where: { projectId, role: "QA", status: "SUCCEEDED" },
+      orderBy: { createdAt: "desc" },
+    });
+    const qaCoveredThisPR =
+      qaRun &&
+      typeof qaRun.input === "object" &&
+      qaRun.input !== null &&
+      (qaRun.input as { prNumber?: number }).prNumber === pr.number;
+
+    if (!qaCoveredThisPR) {
+      return {
+        type: "run_agent",
+        role: "QA",
+        task: `Review pull request #${pr.number}.`,
+        input: { prNumber: pr.number },
+      };
+    }
+
+    // QA done — now Red Team.
+    const redRun = await prisma.agentRun.findFirst({
+      where: { projectId, role: "RED_TEAM_QA", status: "SUCCEEDED" },
+      orderBy: { createdAt: "desc" },
+    });
+    const redCoveredThisPR =
+      redRun &&
+      typeof redRun.input === "object" &&
+      redRun.input !== null &&
+      (redRun.input as { prNumber?: number }).prNumber === pr.number;
+
+    if (!redCoveredThisPR) {
+      return {
+        type: "run_agent",
+        role: "RED_TEAM_QA",
+        task: `Red-team pull request #${pr.number} — try to break it.`,
+        input: { prNumber: pr.number },
+      };
+    }
   }
 
   // 8. Otherwise, sign off.

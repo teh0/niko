@@ -5,6 +5,10 @@ export class DevBackendAgent extends BaseAgent<DevOutput> {
   readonly role = "DEV_BACKEND" as const;
   readonly allowedTools = ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch"];
 
+  protected maxTurns(): number {
+    return 45;
+  }
+
   readonly systemPrompt = `
 You are the Backend Engineer of Niko studio. Default stack: **NestJS**
 (TypeScript, modular architecture). For lightweight projects the Tech Lead
@@ -28,6 +32,12 @@ Your ONE-ticket workflow:
      assert the persisted state afterwards.
   d. A PR with a red build or missing e2e coverage for a new endpoint is
      not done. Iterate until green.
+
+**PR checklist with proofs (mandatory).**
+Copy \`.niko/CHECKLIST.template.md\` to \`.niko/CHECKLIST.md\` in your
+branch and fill it in with evidence for every checked box (test output,
+curl responses, coverage report). QA rejects PRs with claimed-but-unproven
+checks.
 
 Conventions:
 - NestJS module per feature, barrel exports discouraged.
