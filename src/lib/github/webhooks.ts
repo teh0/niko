@@ -8,7 +8,7 @@
 import { Webhooks } from "@octokit/webhooks";
 import { env } from "../env";
 import { prisma } from "../db";
-import { orchestratorQueue } from "../queue";
+import { getOrchestratorQueue } from "../queue";
 
 let webhooks: Webhooks | null = null;
 
@@ -41,7 +41,7 @@ export function getWebhooks(): Webhooks {
     });
 
     if (payload.pull_request.merged) {
-      await orchestratorQueue.add("gate-event", {
+      await getOrchestratorQueue().add("gate-event", {
         projectId: project.id,
         event: "PR_MERGED",
         payload: { number: payload.pull_request.number },
@@ -53,7 +53,7 @@ export function getWebhooks(): Webhooks {
     const project = await findProject(payload.repository.owner.login, payload.repository.name);
     if (!project) return;
 
-    await orchestratorQueue.add("gate-event", {
+    await getOrchestratorQueue().add("gate-event", {
       projectId: project.id,
       event: "PR_REVIEW",
       payload: {

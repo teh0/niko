@@ -28,11 +28,26 @@ const schema = z.object({
   FIGMA_API_KEY: z.string().optional(),
 });
 
-export function hasFigmaMCP() {
-  return Boolean(env.FIGMA_API_KEY);
+type Env = z.infer<typeof schema>;
+
+// Lazy validation: Next.js' build phase imports every module to collect
+// page data, but env vars aren't guaranteed to be loaded yet. We defer
+// parsing until the first field access — by runtime, vars are present.
+let cached: Env | null = null;
+
+function parse(): Env {
+  if (!cached) cached = schema.parse(process.env);
+  return cached;
 }
 
-export const env = schema.parse(process.env);
+export const env: Env = new Proxy({} as Env, {
+  get(_, prop: string) {
+    return parse()[prop as keyof Env];
+  },
+  has(_, prop: string) {
+    return prop in parse();
+  },
+});
 
 export function hasGitHubApp() {
   return Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_PRIVATE_KEY);
@@ -40,4 +55,8 @@ export function hasGitHubApp() {
 
 export function hasGitHubPAT() {
   return Boolean(env.GITHUB_PAT);
+}
+
+export function hasFigmaMCP() {
+  return Boolean(env.FIGMA_API_KEY);
 }

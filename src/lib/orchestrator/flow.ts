@@ -17,7 +17,7 @@
 
 import type { GateKind, Project } from "@prisma/client";
 import { prisma } from "../db";
-import { agentsQueue } from "../queue";
+import { getAgentsQueue } from "../queue";
 
 export type NextAction =
   | { type: "run_agent"; role: import("@prisma/client").AgentRole; task: string; input: Record<string, unknown> }
@@ -198,7 +198,7 @@ export async function enqueueNext(project: Project | { id: string }): Promise<vo
     },
   });
 
-  await agentsQueue.add(
+  await getAgentsQueue().add(
     "run",
     {
       runId: run.id,

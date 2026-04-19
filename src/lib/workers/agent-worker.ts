@@ -5,7 +5,7 @@
 
 import { Worker, type Job } from "bullmq";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { QUEUE_NAMES, agentsQueue, connection, type AgentJobData } from "../queue";
+import { QUEUE_NAMES, getAgentsQueue, getConnection, type AgentJobData } from "../queue";
 import { prisma } from "../db";
 import { env } from "../env";
 import { AGENTS } from "../agents";
@@ -21,7 +21,7 @@ export function startAgentWorker() {
       await runAgentJob(job);
     },
     {
-      connection,
+      connection: getConnection(),
       concurrency: env.MAX_CONCURRENT_AGENTS,
     },
   );
@@ -34,10 +34,10 @@ export function startAgentWorker() {
       console.warn(
         `[agents] rate-limited — pausing queue for ${err.retryAfterMs / 60_000} min`,
       );
-      await agentsQueue.pause();
+      await getAgentsQueue().pause();
       setTimeout(async () => {
         console.info("[agents] resuming queue after rate limit window");
-        await agentsQueue.resume();
+        await getAgentsQueue().resume();
       }, err.retryAfterMs);
     }
   });
@@ -145,7 +145,7 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
         projectId,
         kind: gateKind,
         title: prTitle(role, task),
-        description: (output && JSON.stringify(output, null, 2)) || finalText.slice(0, 2000),
+        description: output ? JSON.stringify(output, null, 2) : finalText.slice(0, 2000),
         prNumber,
         prUrl,
         status: "PENDING",

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { orchestratorQueue } from "@/lib/queue";
+import { getOrchestratorQueue } from "@/lib/queue";
 
 async function createProject(formData: FormData) {
   "use server";
@@ -27,7 +27,7 @@ async function createProject(formData: FormData) {
     },
   });
 
-  await orchestratorQueue.add("gate-event", {
+  await getOrchestratorQueue().add("gate-event", {
     projectId: project.id,
     event: "INTAKE",
   });

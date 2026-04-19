@@ -2,10 +2,6 @@ import { Queue, QueueEvents } from "bullmq";
 import IORedis from "ioredis";
 import { env } from "./env";
 
-export const connection = new IORedis(env.REDIS_URL, {
-  maxRetriesPerRequest: null,
-});
-
 export const QUEUE_NAMES = {
   AGENTS: "niko.agents",
   ORCHESTRATOR: "niko.orchestrator",
@@ -39,15 +35,46 @@ export type OrchestratorJobData = {
   payload?: Record<string, unknown>;
 };
 
-export const agentsQueue = new Queue<AgentJobData>(QUEUE_NAMES.AGENTS, {
-  connection,
-});
+// Lazy singletons — constructing a Redis connection or a BullMQ Queue at
+// module load time fails Next.js build (env vars not ready). We defer until
+// first use; by then we're either in a dev/prod server process or a worker,
+// both of which have env properly loaded.
 
-export const orchestratorQueue = new Queue<OrchestratorJobData>(
-  QUEUE_NAMES.ORCHESTRATOR,
-  { connection },
-);
+let _connection: IORedis | null = null;
+export function getConnection(): IORedis {
+  if (!_connection) {
+    _connection = new IORedis(env.REDIS_URL, { maxRetriesPerRequest: null });
+  }
+  return _connection;
+}
 
-export const agentsQueueEvents = new QueueEvents(QUEUE_NAMES.AGENTS, {
-  connection,
-});
+let _agentsQueue: Queue<AgentJobData> | null = null;
+export function getAgentsQueue(): Queue<AgentJobData> {
+  if (!_agentsQueue) {
+    _agentsQueue = new Queue<AgentJobData>(QUEUE_NAMES.AGENTS, {
+      connection: getConnection(),
+    });
+  }
+  return _agentsQueue;
+}
+
+let _orchestratorQueue: Queue<OrchestratorJobData> | null = null;
+export function getOrchestratorQueue(): Queue<OrchestratorJobData> {
+  if (!_orchestratorQueue) {
+    _orchestratorQueue = new Queue<OrchestratorJobData>(
+      QUEUE_NAMES.ORCHESTRATOR,
+      { connection: getConnection() },
+    );
+  }
+  return _orchestratorQueue;
+}
+
+let _agentsQueueEvents: QueueEvents | null = null;
+export function getAgentsQueueEvents(): QueueEvents {
+  if (!_agentsQueueEvents) {
+    _agentsQueueEvents = new QueueEvents(QUEUE_NAMES.AGENTS, {
+      connection: getConnection(),
+    });
+  }
+  return _agentsQueueEvents;
+}

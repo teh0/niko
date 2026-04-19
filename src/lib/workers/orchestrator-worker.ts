@@ -4,7 +4,7 @@
  */
 
 import { Worker } from "bullmq";
-import { QUEUE_NAMES, connection, type OrchestratorJobData } from "../queue";
+import { QUEUE_NAMES, getConnection, type OrchestratorJobData } from "../queue";
 import { prisma } from "../db";
 import { enqueueNext } from "../orchestrator/flow";
 
@@ -65,6 +65,6 @@ export function startOrchestratorWorker() {
         await enqueueNext({ id: projectId });
       }
     },
-    { connection, concurrency: 4 },
+    { connection: getConnection(), concurrency: 4 },
   );
 }

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { connection } from "@/lib/queue";
+import { getConnection } from "@/lib/queue";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ export async function GET() {
   }
 
   try {
-    await connection.ping();
+    await getConnection().ping();
     checks.redis = "ok";
   } catch (err) {
     checks.redis = err instanceof Error ? err.message : "error";
