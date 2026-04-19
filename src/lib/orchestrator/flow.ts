@@ -168,6 +168,18 @@ export async function decideNext(projectId: string): Promise<NextAction> {
     }
   }
 
+  // 7b. If all remaining tickets are blocked, wait on human (don't sign off
+  // prematurely). A Debug PR is likely open — the human must resolve it.
+  const blockedCount = project.tickets.filter((t) => t.status === "BLOCKED").length;
+  const doneCount = project.tickets.filter((t) => t.status === "DONE").length;
+  if (
+    project.tickets.length > 0 &&
+    blockedCount > 0 &&
+    doneCount + blockedCount === project.tickets.length
+  ) {
+    return { type: "wait_for_gate", kind: "STUCK_DIAGNOSTIC" };
+  }
+
   // 8. Otherwise, sign off.
   const signoff = project.gates.find((g) => g.kind === "QA_SIGNOFF");
   if (!signoff) {

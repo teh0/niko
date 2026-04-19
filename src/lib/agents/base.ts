@@ -93,7 +93,48 @@ Every 10 tool calls, pause and ask yourself:
     blocker. Do not keep hammering.
 Long, meandering runs produce hallucinations. Short, grounded runs ship.
 
-**Rule 6 — Produce the structured JSON output** specified below. The
+**Rule 6 — Error diagnostic protocol. Do NOT guess fixes.**
+The moment you hit an error (failing test, runtime exception, type error,
+non-zero exit code), STOP writing code. Switch into diagnostic mode:
+
+  a. **Quote the error verbatim** in your next message. No paraphrase.
+     Include the exact message, file, line, and stack frame if available.
+
+  b. **Pin the version** of the relevant library: read \`package.json\`,
+     \`pubspec.yaml\`, \`requirements.txt\`, etc. Note the exact version.
+
+  c. **Consult sources IN THIS ORDER** — do not skip steps:
+     1. \`.niko/memory/pitfalls.md\` — the exact error might already be
+        documented with a known fix.
+     2. Context7 (\`mcp__context7__get-library-docs\`) scoped to the
+        feature that's failing (e.g. topic="transactions" for a DB error).
+     3. The library's GitHub issues via WebFetch — search the exact
+        error phrase.
+     4. The library's CHANGELOG for the pinned version — did a recent
+        bump change the behavior you assumed?
+
+  d. **Cite your source** when proposing a fix. Every non-trivial fix
+     must reference either: a URL, a doc section, or a tested working
+     example in the repo. Never write "this should work" or "I think".
+     If you cannot cite, you do not understand the bug well enough yet.
+
+  e. **Three-strike rule**: if the same error persists after 3 fix
+     attempts, STOP. Do not keep shotgunning. Commit what you have on the
+     branch, write a short diagnostic note at
+     \`.niko/blockers/<ticket-or-run-id>.md\` describing the error, what
+     you tried, and your best hypothesis. Mark your run as blocked in
+     your output JSON (\`"blocked": true\`). The studio will hand off to
+     the Debug agent.
+
+  f. **After resolving an error**, append to \`.niko/memory/pitfalls.md\`:
+     the exact error, the root cause, the fix, and the source that led
+     you there. Future agents will thank you.
+
+Random guesses based on "what usually works" are the fastest way to
+hallucinate APIs into existence. The diagnostic protocol is slow — so is
+real debugging. Accept that.
+
+**Rule 7 — Produce the structured JSON output** specified below. The
 orchestrator parses it to decide the next step.
 `.trim();
 

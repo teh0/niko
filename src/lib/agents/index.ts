@@ -7,6 +7,7 @@ import { DevBackendAgent } from "./dev-backend";
 import { DBExpertAgent } from "./db-expert";
 import { QAAgent } from "./qa";
 import { RedTeamQAAgent } from "./red-team-qa";
+import { DebugAgent } from "./debug";
 import type { BaseAgent } from "./base";
 
 export const AGENTS: Record<AgentRole, BaseAgent> = {
@@ -18,6 +19,7 @@ export const AGENTS: Record<AgentRole, BaseAgent> = {
   DB_EXPERT: new DBExpertAgent(),
   QA: new QAAgent(),
   RED_TEAM_QA: new RedTeamQAAgent(),
+  DEBUG: new DebugAgent(),
 };
 
 export * from "./base";
