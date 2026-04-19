@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { IntakeChat } from "./chat";
 import { INTAKE_COVERAGE } from "@/lib/intake/prompt";
+import { Card } from "@/components/ui/card";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +17,7 @@ export default async function IntakePage({ params }: { params: Promise<{ id: str
   if (!session) notFound();
 
   return (
-    <div className="grid grid-cols-[1fr_260px] gap-6 p-6 max-w-6xl mx-auto h-[calc(100vh-64px)]">
+    <div className="grid grid-cols-[1fr_280px] gap-6 p-6 max-w-6xl mx-auto h-[calc(100vh-64px)]">
       <IntakeChat
         sessionId={session.id}
         initialMessages={session.messages.map((m) => ({
@@ -26,11 +29,11 @@ export default async function IntakePage({ params }: { params: Promise<{ id: str
         initialReady={session.status === "READY_TO_FINALIZE"}
       />
 
-      <aside className="border border-border rounded-md p-4 h-fit sticky top-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted mb-3">
+      <Card className="p-4 h-fit sticky top-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           Coverage
         </h2>
-        <ul className="space-y-1.5 text-xs">
+        <ul className="space-y-2 text-xs">
           {INTAKE_COVERAGE.map((item) => {
             const cov = (session.coverage as Record<string, { done?: boolean }> | null)?.[
               item.slug
@@ -39,16 +42,23 @@ export default async function IntakePage({ params }: { params: Promise<{ id: str
             return (
               <li key={item.slug} className="flex items-start gap-2">
                 <span
-                  className={`mt-0.5 inline-block w-3 h-3 rounded-sm border ${
-                    done ? "bg-ok border-ok" : "border-border"
-                  }`}
-                />
-                <span className={done ? "text-fg" : "text-muted"}>{item.label}</span>
+                  className={cn(
+                    "mt-0.5 inline-flex items-center justify-center size-4 rounded-sm border shrink-0",
+                    done
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "border-border",
+                  )}
+                >
+                  {done && <Check className="size-3" strokeWidth={3} />}
+                </span>
+                <span className={done ? "text-foreground" : "text-muted-foreground"}>
+                  {item.label}
+                </span>
               </li>
             );
           })}
         </ul>
-      </aside>
+      </Card>
     </div>
   );
 }

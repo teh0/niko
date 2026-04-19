@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -23,19 +25,17 @@ async function start() {
 export default function NewIntakePage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-2">New project</h1>
-      <p className="text-muted mb-6">
-        You&rsquo;ll chat with our Client Success agent. They&rsquo;ll ask questions until
-        they have what engineering needs to start. Takes ~5 minutes.
-      </p>
-      <form action={start}>
-        <button
-          type="submit"
-          className="bg-accent text-white text-sm px-4 py-2 rounded-md hover:opacity-90"
-        >
-          Start the intake
-        </button>
-      </form>
+      <Card className="p-6">
+        <h1 className="text-2xl font-semibold mb-2">New project</h1>
+        <p className="text-muted-foreground mb-6">
+          You&rsquo;ll chat with our Client Success agent. They&rsquo;ll ask
+          questions until they have what engineering needs to start. Takes ~5
+          minutes.
+        </p>
+        <form action={start}>
+          <Button type="submit">Start the intake</Button>
+        </form>
+      </Card>
     </div>
   );
 }

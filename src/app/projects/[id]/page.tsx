@@ -1,6 +1,11 @@
 import { notFound } from "next/navigation";
+import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { GateActions } from "./gate-actions";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -25,40 +30,53 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <a
             href={`https://github.com/${project.githubOwner}/${project.githubRepo}`}
             target="_blank"
-            className="text-sm text-accent font-mono"
+            rel="noreferrer"
+            className="text-sm text-primary font-mono flex items-center gap-1 hover:underline"
           >
-            {project.githubOwner}/{project.githubRepo} ↗
+            {project.githubOwner}/{project.githubRepo}
+            <ExternalLink className="size-3" />
           </a>
         </div>
-        <span className="px-3 py-1 rounded bg-panel border border-border text-sm">
-          {project.status}
-        </span>
+        <Badge variant="outline">{project.status}</Badge>
       </header>
 
       <Section title="Brief">
-        <pre className="whitespace-pre-wrap text-sm text-muted">{project.brief}</pre>
+        <Card className="p-4">
+          <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-sans">
+            {project.brief}
+          </pre>
+        </Card>
       </Section>
 
-      <Section title="Validation gates" hint="Review and approve on GitHub, or use the buttons here (local / no-webhook mode).">
+      <Section
+        title="Validation gates"
+        hint="Review and approve on GitHub, or use the buttons here (local / no-webhook mode)."
+      >
         {project.gates.length === 0 ? (
-          <p className="text-muted text-sm">No gates yet.</p>
+          <p className="text-muted-foreground text-sm">No gates yet.</p>
         ) : (
-          <ul className="divide-y divide-border border border-border rounded-md">
+          <Card className="divide-y divide-border">
             {project.gates.map((g) => (
-              <li key={g.id} className="px-4 py-3 flex items-center justify-between gap-4">
+              <div
+                key={g.id}
+                className="px-4 py-3 flex items-center justify-between gap-4"
+              >
                 <div className="min-w-0">
                   <div className="text-sm">
-                    <span className="font-mono text-xs text-muted mr-2">{g.kind}</span>
+                    <span className="font-mono text-xs text-muted-foreground mr-2">
+                      {g.kind}
+                    </span>
                     {g.title}
                   </div>
                   {g.prUrl && (
                     <a
                       href={g.prUrl}
                       target="_blank"
-                      className="text-xs text-accent"
                       rel="noreferrer"
+                      className="text-xs text-primary flex items-center gap-1 hover:underline mt-0.5"
                     >
-                      PR #{g.prNumber} ↗
+                      PR #{g.prNumber}
+                      <ExternalLink className="size-3" />
                     </a>
                   )}
                 </div>
@@ -66,46 +84,52 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   {g.status === "PENDING" && <GateActions gateId={g.id} />}
                   <GateBadge status={g.status} decision={g.decision} />
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
+          </Card>
         )}
       </Section>
 
       <Section title="Tickets">
         {project.tickets.length === 0 ? (
-          <p className="text-muted text-sm">Not broken down yet.</p>
+          <p className="text-muted-foreground text-sm">Not broken down yet.</p>
         ) : (
-          <ul className="divide-y divide-border border border-border rounded-md">
+          <Card className="divide-y divide-border">
             {project.tickets.map((t) => (
-              <li key={t.id} className="px-4 py-3">
+              <div key={t.id} className="px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm">{t.title}</div>
-                    <div className="text-xs text-muted font-mono">{t.role}</div>
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {t.role}
+                    </div>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-panel border border-border">
-                    {t.status}
-                  </span>
+                  <Badge variant="outline">{t.status}</Badge>
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
+          </Card>
         )}
       </Section>
 
       <Section title="Recent agent runs">
-        <ul className="divide-y divide-border border border-border rounded-md text-sm">
-          {project.agentRuns.map((r) => (
-            <li key={r.id} className="px-4 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-muted">{r.role}</span>
-                <span>{r.task}</span>
+        <Card className="divide-y divide-border text-sm">
+          {project.agentRuns.length === 0 ? (
+            <div className="px-4 py-3 text-muted-foreground">No runs yet.</div>
+          ) : (
+            project.agentRuns.map((r) => (
+              <div key={r.id} className="px-4 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {r.role}
+                  </span>
+                  <span>{r.task}</span>
+                </div>
+                <span className="text-xs text-muted-foreground">{r.status}</span>
               </div>
-              <span className="text-xs text-muted">{r.status}</span>
-            </li>
-          ))}
-        </ul>
+            ))
+          )}
+        </Card>
       </Section>
     </div>
   );
@@ -123,8 +147,10 @@ function Section({
   return (
     <section>
       <div className="mb-2 flex items-baseline gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{title}</h2>
-        {hint && <span className="text-xs text-muted">{hint}</span>}
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {title}
+        </h2>
+        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
       </div>
       {children}
     </section>
@@ -139,13 +165,17 @@ function GateBadge({
   decision: string | null;
 }) {
   const label = status === "PENDING" ? "waiting review" : (decision ?? "decided").toLowerCase();
-  const color =
-    status === "PENDING"
-      ? "bg-warn/20 text-warn border-warn/30"
-      : decision === "APPROVED"
-        ? "bg-ok/20 text-ok border-ok/30"
-        : "bg-danger/20 text-danger border-danger/30";
   return (
-    <span className={`text-xs px-2 py-0.5 rounded border ${color}`}>{label}</span>
+    <Badge
+      variant="outline"
+      className={cn(
+        status === "PENDING" && "bg-yellow-500/15 text-yellow-500 border-yellow-500/30",
+        decision === "APPROVED" && "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
+        (decision === "REJECTED" || decision === "CHANGES_REQUESTED") &&
+          "bg-red-500/15 text-red-500 border-red-500/30",
+      )}
+    >
+      {label}
+    </Badge>
   );
 }

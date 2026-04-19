@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, MessageSquareText, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-/**
- * Manual gate decision controls — for local testing without a public
- * GitHub webhook. In prod, GitHub PR reviews trigger the same updates
- * via the webhook route.
- */
 export function GateActions({ gateId }: { gateId: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -39,43 +37,46 @@ export function GateActions({ gateId }: { gateId: string }) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <button
-        onClick={() => decide("APPROVED")}
-        disabled={busy}
-        className="text-xs px-2 py-1 rounded bg-ok/20 text-ok border border-ok/40 hover:bg-ok/30 disabled:opacity-50"
-      >
-        Approve
-      </button>
       {feedbackOpen ? (
         <>
-          <input
+          <Input
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="Feedback…"
-            className="text-xs bg-bg border border-border rounded px-2 py-1 w-48"
+            className="w-48 h-8 text-xs"
           />
-          <button
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => decide("CHANGES_REQUESTED")}
             disabled={busy}
-            className="text-xs px-2 py-1 rounded bg-warn/20 text-warn border border-warn/40"
           >
             Send
-          </button>
-          <button
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
             onClick={() => setFeedbackOpen(false)}
-            className="text-xs text-muted hover:text-fg"
           >
-            ×
-          </button>
+            <X className="size-4" />
+          </Button>
         </>
       ) : (
-        <button
-          onClick={() => setFeedbackOpen(true)}
-          disabled={busy}
-          className="text-xs px-2 py-1 rounded bg-warn/20 text-warn border border-warn/40 hover:bg-warn/30 disabled:opacity-50"
-        >
-          Request changes
-        </button>
+        <>
+          <Button size="sm" onClick={() => decide("APPROVED")} disabled={busy}>
+            <Check className="size-3.5" />
+            Approve
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setFeedbackOpen(true)}
+            disabled={busy}
+          >
+            <MessageSquareText className="size-3.5" />
+            Request changes
+          </Button>
+        </>
       )}
     </div>
   );

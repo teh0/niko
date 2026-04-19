@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type Msg = { id: string; role: "USER" | "AGENT" | "SYSTEM"; content: string };
 
@@ -60,7 +65,6 @@ export function IntakeChat({
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        // Parse SSE events (blank-line separated).
         const parts = buffer.split("\n\n");
         buffer = parts.pop() ?? "";
         for (const part of parts) {
@@ -108,7 +112,7 @@ export function IntakeChat({
   }
 
   return (
-    <div className="flex flex-col h-full border border-border rounded-md bg-panel/30 overflow-hidden">
+    <Card className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((m) => (
           <Bubble key={m.id} msg={m} />
@@ -120,66 +124,65 @@ export function IntakeChat({
       </div>
 
       {readyToFinalize ? (
-        <div className="border-t border-border p-4 bg-panel">
-          <div className="text-sm mb-2">
+        <div className="border-t border-border p-4 bg-muted-shadcn/10 space-y-3">
+          <div className="text-sm">
             The agent thinks it has enough info. Review the brief in the last message
             and kick off the project.
           </div>
           <div className="flex gap-2 items-center">
-            <input
+            <Input
               value={installationId}
               onChange={(e) => setInstallationId(e.target.value)}
               placeholder="GitHub App installation id (optional)"
-              className="flex-1 bg-bg border border-border rounded-md px-3 py-2 text-sm font-mono"
+              className="font-mono"
             />
-            <button
-              onClick={finalize}
-              className="bg-accent text-white text-sm px-4 py-2 rounded-md hover:opacity-90"
-            >
-              Create project
-            </button>
+            <Button onClick={finalize}>Create project</Button>
           </div>
         </div>
       ) : (
         <form onSubmit={send} className="border-t border-border p-3 flex gap-2">
-          <input
+          <Input
             name="content"
             autoComplete="off"
             disabled={streaming || status === "FINALIZED"}
             placeholder={streaming ? "Agent is typing…" : "Your answer…"}
-            className="flex-1 bg-bg border border-border rounded-md px-3 py-2 text-sm"
           />
-          <button
+          <Button
             type="submit"
             disabled={streaming || status === "FINALIZED"}
-            className="bg-accent text-white text-sm px-4 py-2 rounded-md hover:opacity-90 disabled:opacity-50"
+            size="icon"
           >
-            Send
-          </button>
+            <Send className="size-4" />
+          </Button>
         </form>
       )}
-    </div>
+    </Card>
   );
 }
 
 function Bubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
   if (msg.role === "SYSTEM") {
     return (
-      <div className="text-xs text-danger border border-danger/40 bg-danger/10 rounded-md px-3 py-2">
+      <div className="text-xs text-destructive border border-destructive/40 bg-destructive/10 rounded-md px-3 py-2">
         {msg.content}
       </div>
     );
   }
   const isUser = msg.role === "USER";
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
-        className={`max-w-[85%] rounded-md px-3 py-2 text-sm whitespace-pre-wrap ${
-          isUser ? "bg-accent text-white" : "bg-panel border border-border"
-        }`}
+        className={cn(
+          "max-w-[85%] rounded-md px-3 py-2 text-sm whitespace-pre-wrap",
+          isUser
+            ? "bg-primary text-primary-foreground"
+            : "bg-card border border-border",
+        )}
       >
         {msg.content}
-        {streaming && <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />}
+        {streaming && (
+          <span className="inline-block w-1 h-4 ml-0.5 bg-current animate-pulse align-middle" />
+        )}
       </div>
     </div>
   );
