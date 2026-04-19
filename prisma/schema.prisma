@@ -16,7 +16,8 @@ datasource db {
 model Project {
   id            String   @id @default(cuid())
   name          String
-  brief         String   @db.Text          // raw brief from the user
+  brief         String   @db.Text          // structured brief produced by the Intake agent
+  intakeSession IntakeSession?
   githubOwner   String                     // e.g. "les-ignobles"
   githubRepo    String                     // e.g. "my-app"
   installationId BigInt?                   // GitHub App installation id (null if PAT)
@@ -150,6 +151,7 @@ enum AgentRole {
   QA                 // QA engineer (happy path, spec compliance)
   RED_TEAM_QA        // Adversarial QA: tries to break the PR
   DEBUG              // Root-cause analysis when another agent gets stuck
+  INTAKE             // Client Success: turns a fuzzy idea into a brief via chat
 }
 
 // Records every agent execution for observability, replay, audit.
@@ -185,6 +187,66 @@ enum RunStatus {
   SUCCEEDED
   FAILED
   CANCELLED
+}
+
+// ─── Intake (client discovery chat that produces the brief) ──────────────
+
+model IntakeSession {
+  id          String     @id @default(cuid())
+
+  // Conversation state
+  status      IntakeStatus @default(IN_PROGRESS)
+  messages    IntakeMessage[]
+
+  // Collected along the way (surfaced in the UI as the chat progresses)
+  name        String?
+  githubOwner String?
+  githubRepo  String?
+  installationId BigInt?
+  figmaUrl    String?
+
+  // Coverage checklist — which essentials have been addressed so far.
+  // JSON keyed by slug with { done: boolean, note?: string }.
+  coverage    Json?
+
+  // Final structured brief (markdown) proposed by the agent and approved
+  // by the user before project creation.
+  finalBrief  String?    @db.Text
+
+  // Once finalized → one Project is created and linked here.
+  projectId   String?    @unique
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status])
+}
+
+enum IntakeStatus {
+  IN_PROGRESS
+  READY_TO_FINALIZE     // agent has proposed a brief; user can accept
+  FINALIZED             // project created, flow started
+  ABANDONED
+}
+
+model IntakeMessage {
+  id        String         @id @default(cuid())
+  sessionId String
+  session   IntakeSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  role      IntakeRole
+  content   String         @db.Text
+
+  createdAt DateTime       @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+enum IntakeRole {
+  USER
+  AGENT
+  SYSTEM
 }
 
 // ─── Pull requests (mirrored from GitHub for quick queries) ──────────────

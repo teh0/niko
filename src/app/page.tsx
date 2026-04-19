@@ -16,7 +16,7 @@ export default async function ProjectsListPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Projects</h1>
         <Link
-          href="/projects/new"
+          href="/intake/new"
           className="bg-accent text-white text-sm px-3 py-2 rounded-md hover:opacity-90"
         >
           New project

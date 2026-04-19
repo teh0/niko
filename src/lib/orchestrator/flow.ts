@@ -20,7 +20,12 @@ import { prisma } from "../db";
 import { getAgentsQueue } from "../queue";
 
 export type NextAction =
-  | { type: "run_agent"; role: import("@prisma/client").AgentRole; task: string; input: Record<string, unknown> }
+  | {
+      type: "run_agent";
+      role: Exclude<import("@prisma/client").AgentRole, "INTAKE">;
+      task: string;
+      input: Record<string, unknown>;
+    }
   | { type: "wait_for_gate"; kind: GateKind }
   | { type: "done" };
 
@@ -113,6 +118,11 @@ export async function decideNext(projectId: string): Promise<NextAction> {
   const ready = todos.find((t) => t.dependsOn.every((d) => doneIds.has(d)));
 
   if (ready) {
+    if (ready.role === "INTAKE") {
+      // INTAKE is not a ticket role; guard against bad data rather than
+      // panicking at runtime.
+      throw new Error(`Ticket ${ready.id} has invalid role INTAKE`);
+    }
     return {
       type: "run_agent",
       role: ready.role,

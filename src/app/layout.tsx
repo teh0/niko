@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <nav className="flex gap-4 text-sm text-muted">
               <Link href="/" className="hover:text-fg">Projects</Link>
-              <Link href="/projects/new" className="hover:text-fg">+ New</Link>
+              <Link href="/intake/new" className="hover:text-fg">+ New</Link>
             </nav>
           </header>
           <main className="flex-1">{children}</main>

@@ -10,7 +10,11 @@ import { RedTeamQAAgent } from "./red-team-qa";
 import { DebugAgent } from "./debug";
 import type { BaseAgent } from "./base";
 
-export const AGENTS: Record<AgentRole, BaseAgent> = {
+// The INTAKE agent runs inline on HTTP requests (pure chat, no workspace),
+// not through the worker queue — so it's not in this registry.
+export type WorkerRole = Exclude<AgentRole, "INTAKE">;
+
+export const AGENTS: Record<WorkerRole, BaseAgent> = {
   PM: new PMAgent(),
   TECH_LEAD: new TechLeadAgent(),
   DEV_WEB: new DevWebAgent(),
