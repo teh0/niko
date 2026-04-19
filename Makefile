@@ -1,5 +1,34 @@
 .PHONY: help install start stop restart logs login status shell db migrate backup upgrade down clean
 
+bootstrap: ## One-shot local dev setup: deps + services + .env + DB + checks
+	./scripts/bootstrap.sh
+
+gh-token: ## Copy your current `gh` CLI token into .env as GITHUB_PAT (fastest local setup)
+	@if ! command -v gh >/dev/null 2>&1; then echo "✘ gh CLI not installed. Install: https://cli.github.com/"; exit 1; fi
+	@if ! gh auth status >/dev/null 2>&1; then echo "✘ gh CLI not authenticated. Run: gh auth login"; exit 1; fi
+	@./scripts/set-env.sh GITHUB_PAT "$$(gh auth token)"
+	@echo "✔ GITHUB_PAT written to .env — you can skip the GitHub App for local testing."
+
+encode-pem: ## Encode a GitHub App .pem into a one-line .env value (FILE=path/to/key.pem)
+	@if [ -z "$(FILE)" ]; then echo "Usage: make encode-pem FILE=path/to/key.pem"; exit 1; fi
+	./scripts/encode-pem.sh $(FILE)
+
+dev: ## Run the Next.js dashboard in dev mode (terminal A)
+	pnpm dev
+
+worker: ## Run the BullMQ agent worker (terminal B)
+	pnpm worker
+
+dev-up: ## Start local Postgres + Redis for dev (Docker)
+	docker compose -f docker-compose.dev.yml up -d
+
+dev-down: ## Stop local Postgres + Redis
+	docker compose -f docker-compose.dev.yml down
+
+dev-reset: ## Wipe local dev DB + Redis (confirm prompt)
+	@read -p "Wipe local Postgres and Redis data? Type 'yes': " c && [ "$$c" = "yes" ]
+	docker compose -f docker-compose.dev.yml down -v
+
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 

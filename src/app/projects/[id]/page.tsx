@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { GateActions } from "./gate-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,25 +39,33 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <pre className="whitespace-pre-wrap text-sm text-muted">{project.brief}</pre>
       </Section>
 
-      <Section title="Validation gates" hint="Review and approve on GitHub to advance.">
+      <Section title="Validation gates" hint="Review and approve on GitHub, or use the buttons here (local / no-webhook mode).">
         {project.gates.length === 0 ? (
           <p className="text-muted text-sm">No gates yet.</p>
         ) : (
           <ul className="divide-y divide-border border border-border rounded-md">
             {project.gates.map((g) => (
-              <li key={g.id} className="px-4 py-3 flex items-center justify-between">
-                <div>
+              <li key={g.id} className="px-4 py-3 flex items-center justify-between gap-4">
+                <div className="min-w-0">
                   <div className="text-sm">
                     <span className="font-mono text-xs text-muted mr-2">{g.kind}</span>
                     {g.title}
                   </div>
                   {g.prUrl && (
-                    <a href={g.prUrl} target="_blank" className="text-xs text-accent">
+                    <a
+                      href={g.prUrl}
+                      target="_blank"
+                      className="text-xs text-accent"
+                      rel="noreferrer"
+                    >
                       PR #{g.prNumber} ↗
                     </a>
                   )}
                 </div>
-                <GateBadge status={g.status} decision={g.decision} />
+                <div className="flex items-center gap-3 shrink-0">
+                  {g.status === "PENDING" && <GateActions gateId={g.id} />}
+                  <GateBadge status={g.status} decision={g.decision} />
+                </div>
               </li>
             ))}
           </ul>
