@@ -1,0 +1,205 @@
+// Niko — AI studio data model
+// Represents projects, the agent team working on them, validation gates,
+// tickets, PRs, and every agent execution (for observability + replay).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Projects ────────────────────────────────────────────────────────────
+
+model Project {
+  id            String   @id @default(cuid())
+  name          String
+  brief         String   @db.Text          // raw brief from the user
+  githubOwner   String                     // e.g. "les-ignobles"
+  githubRepo    String                     // e.g. "my-app"
+  installationId BigInt?                   // GitHub App installation id (null if PAT)
+  defaultBranch String   @default("main")
+
+  // Optional Figma file URL. When set, UI-facing agents (PM, Dev Web, Dev
+  // Mobile) are told to consult the designs via the Figma MCP tools.
+  figmaUrl      String?
+
+  // Stack plan — decided by Tech Lead at project kickoff, validated by user.
+  // null until the Tech Lead gate is approved.
+  stackPlan     Json?
+
+  status        ProjectStatus @default(INTAKE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  gates         Gate[]
+  tickets       Ticket[]
+  agentRuns     AgentRun[]
+  pullRequests  PullRequest[]
+
+  @@unique([githubOwner, githubRepo])
+}
+
+enum ProjectStatus {
+  INTAKE            // brief just received
+  SPECCING          // PM writing specs
+  STACK_PLANNING    // Tech Lead proposing stack
+  SCAFFOLDING       // Tech Lead scaffolding repo
+  BUILDING          // devs working
+  QA                // QA review in progress
+  READY             // all gates approved, ready to hand off
+  PAUSED            // blocked waiting on user
+  FAILED            // terminal error
+}
+
+// ─── Validation gates (human-in-the-loop decisions) ──────────────────────
+
+model Gate {
+  id          String      @id @default(cuid())
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  kind        GateKind
+  title       String
+  description String      @db.Text
+
+  // GitHub PR where the user reviews/approves this gate.
+  // For non-code gates (e.g. specs), we still open a PR with the doc.
+  prNumber    Int?
+  prUrl       String?
+
+  status      GateStatus  @default(PENDING)
+  decision    GateDecision?
+  feedback    String?     @db.Text         // user comment on rejection/changes
+  decidedAt   DateTime?
+  decidedBy   String?                      // github login of reviewer
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([projectId, status])
+}
+
+enum GateKind {
+  SPECS              // PM's specs doc
+  STACK_PLAN         // Tech Lead's ADR on stack
+  DATA_MODEL         // DB Expert's schema
+  SCAFFOLD           // initial repo scaffold
+  FEATURE_PR         // each dev PR
+  QA_SIGNOFF         // QA final approval
+  RELEASE            // final release readiness
+}
+
+enum GateStatus {
+  PENDING
+  DECIDED
+}
+
+enum GateDecision {
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+// ─── Tickets (unit of work) ──────────────────────────────────────────────
+
+model Ticket {
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String      @db.Text
+  role         AgentRole                   // which agent owns this ticket
+  priority     Int         @default(0)
+  status       TicketStatus @default(TODO)
+  dependsOn    String[]                    // ticket ids
+  prNumber     Int?
+  branch       String?
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  agentRuns    AgentRun[]
+
+  @@index([projectId, status])
+}
+
+enum TicketStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  CHANGES_REQUESTED
+  DONE
+  BLOCKED
+}
+
+// ─── Agents ──────────────────────────────────────────────────────────────
+
+enum AgentRole {
+  PM                 // Product Manager
+  TECH_LEAD          // Tech Lead
+  DEV_WEB            // Next.js developer
+  DEV_MOBILE         // Flutter developer
+  DEV_BACKEND        // NestJS / backend developer
+  DB_EXPERT          // Database engineer
+  QA                 // QA engineer
+}
+
+// Records every agent execution for observability, replay, audit.
+model AgentRun {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ticketId    String?
+  ticket      Ticket?    @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  role        AgentRole
+  task        String                       // short description of what was asked
+  input       Json                         // full input payload
+  output      Json?                        // final structured output
+  transcript  Json?                        // streamed messages from the agent (array)
+
+  status      RunStatus  @default(QUEUED)
+  error       String?    @db.Text
+  startedAt   DateTime?
+  endedAt     DateTime?
+  tokensIn    Int?
+  tokensOut   Int?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([projectId, role, status])
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+// ─── Pull requests (mirrored from GitHub for quick queries) ──────────────
+
+model PullRequest {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  number       Int
+  title        String
+  branch       String
+  state        String                       // "open" | "closed" | "merged"
+  merged       Boolean  @default(false)
+  url          String
+  openedByRole AgentRole?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([projectId, number])
+}

@@ -1,0 +1,13 @@
+node_modules
+.next
+.env
+.env.local
+.DS_Store
+*.log
+/data
+.pnpm-store
+dist
+.turbo
+
+# Claude MAX OAuth credentials (NEVER commit)
+.claude/

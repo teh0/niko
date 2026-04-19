@@ -1,0 +1,98 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      CADDY_EMAIL: ${CADDY_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      - caddy-logs:/var/log/caddy
+    depends_on:
+      - web
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: niko
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-niko}
+      POSTGRES_DB: niko
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U niko"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://niko:${POSTGRES_PASSWORD:-niko}@postgres:5432/niko?schema=public
+      REDIS_URL: redis://redis:6379
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
+      GITHUB_APP_CLIENT_ID: ${GITHUB_APP_CLIENT_ID}
+      GITHUB_APP_CLIENT_SECRET: ${GITHUB_APP_CLIENT_SECRET}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+      GITHUB_PAT: ${GITHUB_PAT}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost}
+      WORKSPACE_DIR: /workspaces
+    expose:
+      - "3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes:
+      - workspaces:/workspaces
+    command: ["sh", "-c", "pnpm db:deploy && pnpm start"]
+    restart: unless-stopped
+
+  worker:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://niko:${POSTGRES_PASSWORD:-niko}@postgres:5432/niko?schema=public
+      REDIS_URL: redis://redis:6379
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
+      GITHUB_PAT: ${GITHUB_PAT}
+      WORKSPACE_DIR: /workspaces
+      MAX_CONCURRENT_AGENTS: ${MAX_CONCURRENT_AGENTS:-4}
+      CLAUDE_HOME: /home/niko/.claude
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes:
+      - workspaces:/workspaces
+      # Persist Claude MAX OAuth session across container restarts.
+      # Run `docker compose exec worker claude login` ONCE to populate this.
+      - claude-creds:/home/niko/.claude
+    command: ["pnpm", "worker"]
+    restart: unless-stopped
+
+volumes:
+  pg-data:
+  redis-data:
+  workspaces:
+  claude-creds:
+  caddy-data:
+  caddy-config:
+  caddy-logs:

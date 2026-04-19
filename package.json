@@ -1,0 +1,43 @@
+{
+  "name": "niko",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-driven mobile/web studio — a team of specialized agents that scope, architect, build, and QA your project via GitHub PRs.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "worker": "tsx src/lib/workers/index.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "@octokit/auth-app": "^7.1.1",
+    "@octokit/rest": "^21.0.2",
+    "@octokit/webhooks": "^13.3.0",
+    "@prisma/client": "^5.22.0",
+    "bullmq": "^5.21.2",
+    "ioredis": "^5.4.1",
+    "next": "15.0.3",
+    "react": "19.0.0-rc-02c0e824-20241028",
+    "react-dom": "19.0.0-rc-02c0e824-20241028",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.14.0",
+    "eslint-config-next": "15.0.3",
+    "postcss": "^8.4.49",
+    "prisma": "^5.22.0",
+    "tailwindcss": "^3.4.14",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

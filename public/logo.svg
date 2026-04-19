@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 72" width="260" height="72">
+  <!-- Icon mark -->
+  <rect x="4" y="4" width="64" height="64" rx="14" fill="#6366f1"/>
+  <path fill="#fff" transform="translate(4 4) scale(0.125)" d="M152 384V168h58v36c18-26 48-44 86-44 54 0 84 34 84 92v132h-60V256c0-32-16-50-44-50-30 0-66 22-66 70v108z"/>
+  <circle cx="47.5" cy="20" r="2.25" fill="#e0e7ff"/>
+
+  <!-- Wordmark -->
+  <text x="88" y="48"
+        font-family="ui-monospace, 'JetBrains Mono', 'Menlo', monospace"
+        font-size="34"
+        font-weight="600"
+        fill="#e5e7eb"
+        letter-spacing="-0.5">
+    niko<tspan fill="#6366f1">.studio</tspan>
+  </text>
+</svg>
