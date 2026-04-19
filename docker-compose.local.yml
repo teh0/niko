@@ -13,6 +13,6 @@ services:
 
   web:
     ports:
-      - "3000:3000"
+      - "${NIKO_WEB_PORT:-3000}:3000"
     environment:
-      PUBLIC_URL: http://localhost:3000
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:${NIKO_WEB_PORT:-3000}}

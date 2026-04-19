@@ -36,7 +36,11 @@ RUN pnpm db:generate && pnpm build
 FROM base AS runtime
 ENV NODE_ENV=production
 
-COPY --from=deps /app/node_modules ./node_modules
+# IMPORTANT: copy node_modules from `build`, not `deps` — `build` ran
+# `prisma generate` which writes the Prisma client INTO node_modules.
+# If we copied from `deps` the runtime image would be missing
+# .prisma/client/default, and every Prisma call would 500.
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
