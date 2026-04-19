@@ -1,6 +1,12 @@
 .PHONY: help install start stop restart logs login status shell db migrate backup upgrade down clean
 
-bootstrap: ## One-shot local dev setup: deps + services + .env + DB + checks
+up: ## 🚀 Zero-setup local test: everything in Docker (auto .env, auto-migrate, auto gh token)
+	./scripts/up.sh
+
+go: ## Dev mode on your host (hot-reload). Requires Node/pnpm/claude CLI installed
+	./scripts/go.sh
+
+bootstrap: ## Lower-level: just bootstrap without running the app
 	./scripts/bootstrap.sh
 
 gh-token: ## Copy your current `gh` CLI token into .env as GITHUB_PAT (fastest local setup)
@@ -46,10 +52,10 @@ restart: ## Restart all services
 	docker compose restart
 
 logs: ## Tail logs from all services (ctrl-c to exit)
-	docker compose logs -f --tail=100
+	docker compose -f docker-compose.yml -f docker-compose.local.yml logs -f --tail=100
 
 status: ## Show service status
-	docker compose ps
+	docker compose -f docker-compose.yml -f docker-compose.local.yml ps
 	@echo ""
 	@echo "Health check:"
 	@curl -s http://localhost/api/health || echo "  dashboard not reachable"
@@ -57,34 +63,34 @@ status: ## Show service status
 login: ## Authenticate Claude MAX inside the worker container (interactive, one-time)
 	@echo "▶ Running 'claude login' inside the worker container."
 	@echo "  Copy the URL it prints, open it in your browser, paste the code back."
-	docker compose exec worker claude login
+	docker compose -f docker-compose.yml -f docker-compose.local.yml exec worker claude login
 	@echo "▶ Verifying session:"
-	docker compose exec worker claude /status
+	docker compose -f docker-compose.yml -f docker-compose.local.yml exec worker claude /status
 
 shell: ## Open a shell in the worker container
-	docker compose exec worker sh
+	docker compose -f docker-compose.yml -f docker-compose.local.yml exec worker sh
 
 db: ## Open a psql shell against the Niko database
-	docker compose exec postgres psql -U niko -d niko
+	docker compose -f docker-compose.yml -f docker-compose.local.yml exec postgres psql -U niko -d niko
 
 migrate: ## Apply pending DB migrations
-	docker compose exec web pnpm db:deploy
+	docker compose -f docker-compose.yml -f docker-compose.local.yml exec web pnpm db:deploy
 
 backup: ## Dump Postgres to ./backups/niko-<timestamp>.sql.gz
 	@mkdir -p backups
 	@file="backups/niko-$$(date -u +%Y%m%dT%H%M%SZ).sql.gz"; \
-	docker compose exec -T postgres pg_dump -U niko niko | gzip > "$$file" && \
+	docker compose -f docker-compose.yml -f docker-compose.local.yml exec -T postgres pg_dump -U niko niko | gzip > "$$file" && \
 	echo "✔ Backup saved to $$file"
 
 upgrade: ## Pull latest code, rebuild, migrate, restart
 	git pull --ff-only
 	docker compose build
 	docker compose up -d
-	docker compose exec web pnpm db:deploy
+	docker compose -f docker-compose.yml -f docker-compose.local.yml exec web pnpm db:deploy
 
 down: ## Stop and remove containers (volumes preserved)
-	docker compose down
+	docker compose -f docker-compose.yml -f docker-compose.local.yml down
 
 clean: ## ⚠️  Remove ALL data (containers + volumes). Irreversible.
 	@read -p "This will delete the DB, Redis, workspaces, Caddy data, and Claude session. Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ]
-	docker compose down -v
+	docker compose -f docker-compose.yml -f docker-compose.local.yml down -v

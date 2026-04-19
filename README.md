@@ -36,23 +36,40 @@ Every gate is a real GitHub PR you review with your usual tooling.
   authenticated via OAuth — no API key required)
 - A **GitHub App** (recommended) or a fine-grained PAT
 
-## Setup (local)
+## Local test — **one command**
 
 ```bash
-pnpm install
-cp .env.example .env
-# edit .env: GITHUB_APP_* (or GITHUB_PAT), DATABASE_URL, REDIS_URL
-
-pnpm db:migrate    # creates the schema
-
-# Log in to Claude MAX — one-time:
-claude login       # opens a browser, stores OAuth creds in ~/.claude/
-claude /status     # verify you're on MAX, not API key
-
-# Two processes:
-pnpm dev           # Next.js dashboard at http://localhost:3000
-pnpm worker        # BullMQ workers
+make up
 ```
+
+That's it. The script:
+- builds and starts postgres + redis + web + worker in Docker
+- generates a `.env` with random secrets the first time
+- injects your `gh` CLI token as `GITHUB_PAT` if it's logged in (so you
+  can skip the GitHub App for the first test — just need `gh auth login`
+  done once)
+- prints the one remaining step: `make login` to authenticate Claude MAX
+  inside the worker container (opens a URL you paste into your browser)
+
+Dashboard: http://localhost:3000
+
+Teardown:
+```bash
+make down     # stop (data preserved)
+make clean    # nuke everything (DB, workspaces, Claude session)
+```
+
+### Alternative: dev mode on the host (hot-reload)
+
+If you plan to tweak Niko itself, run it on your host for hot-reload:
+
+```bash
+make go
+```
+
+This uses `docker-compose.dev.yml` (just postgres + redis in Docker) and
+runs web + worker directly on your host via pnpm. Requires Node 22, pnpm,
+Docker, and the `claude` CLI installed locally.
 
 ## GitHub: App vs PAT
 
