@@ -92,16 +92,13 @@ export async function* streamGateReply(
   const options: Options = {
     cwd,
     systemPrompt,
-    maxTurns: 8,
+    // Reformulating / summarizing a PR realistically needs a dozen Read
+    // calls on the scaffold + maybe Context7 lookups. 8 was too tight
+    // (observed 'error_max_turns' with empty reply).
+    maxTurns: 25,
     // Read-only toolset — Read/Grep/Glob so the agent can cite files.
     // No Edit/Write/Bash — chat must not mutate the repo.
-    allowedTools: [
-      "Read",
-      "Grep",
-      "Glob",
-      "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs",
-    ],
+    allowedTools: ["Read", "Grep", "Glob", "mcp__context7__*"],
     mcpServers: buildMcpServers(),
     pathToClaudeCodeExecutable: resolveClaudePath(),
     env: childEnv,
@@ -117,9 +114,16 @@ export async function* streamGateReply(
       }
       if (msg.type === "result") {
         if (msg.subtype !== "success") {
+          const resultText = "result" in msg ? String(msg.result ?? "") : "";
+          const label =
+            msg.subtype === "error_max_turns"
+              ? "trop d'étapes nécessaires (limite atteinte) — reformule ta question plus précisément"
+              : msg.subtype === "error_during_execution"
+                ? "erreur pendant l'exécution"
+                : msg.subtype;
           yield {
             type: "error",
-            message: "result" in msg ? String(msg.result) : "unknown agent error",
+            message: resultText ? `${label} · ${resultText}` : label,
           };
           return;
         }
