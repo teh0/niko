@@ -62,7 +62,7 @@ export function ProjectSidebar({
   ];
 
   return (
-    <aside className="sticky top-14 self-start h-[calc(100vh-3.5rem)] border-r border-border bg-muted/30 flex flex-col">
+    <aside className="sticky top-14 self-start h-[calc(100vh-3.5rem)] border-r border-border bg-background flex flex-col">
       <div className="p-3">
         <ProjectSwitcher
           currentId={projectId}
@@ -87,8 +87,8 @@ export function ProjectSidebar({
               className={cn(
                 "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors",
                 active
-                  ? "bg-background text-foreground shadow-sm border border-border"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background/60",
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
               )}
             >
               <Icon className="size-4" />
