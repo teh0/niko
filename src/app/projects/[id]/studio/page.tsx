@@ -153,7 +153,7 @@ export default async function StudioPage({ params }: { params: Promise<{ id: str
   const activeCount = Array.from(snapshot.values()).filter((s) => s.active).length;
 
   return (
-    <div className="px-8 py-8 max-w-6xl">
+    <div className="px-8 py-8">
       {anyActive && <AutoRefresh intervalMs={3000} />}
 
       <header className="mb-8 flex items-start justify-between gap-4">

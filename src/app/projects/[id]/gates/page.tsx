@@ -29,7 +29,7 @@ export default async function ProjectGatesPage({
   if (!project) notFound();
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-8 py-8">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Validation gates</h1>
         <p className="mt-1 text-sm text-muted-foreground">

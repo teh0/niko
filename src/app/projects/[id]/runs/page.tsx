@@ -54,7 +54,7 @@ export default async function ProjectRunsPage({
   const hasActive = running.length > 0 || queued.length > 0;
 
   return (
-    <div className="px-8 py-8 max-w-5xl">
+    <div className="px-8 py-8">
       {hasActive && <AutoRefresh intervalMs={3000} />}
 
       <header className="mb-6">

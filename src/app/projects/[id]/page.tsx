@@ -53,7 +53,7 @@ export default async function ProjectOverviewPage({
     latestRun?.status === "FAILED" && pendingGates.length === 0 && !anyActive;
 
   return (
-    <div className="px-8 py-8 max-w-4xl space-y-8">
+    <div className="px-8 py-8 space-y-8">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
         <p className="mt-1 text-sm text-muted-foreground">

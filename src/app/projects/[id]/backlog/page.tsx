@@ -18,7 +18,7 @@ export default async function ProjectBacklogPage({
   if (!project) notFound();
 
   return (
-    <div className="px-8 py-8 max-w-6xl">
+    <div className="px-8 py-8">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Backlog</h1>
         <p className="mt-1 text-sm text-muted-foreground">
