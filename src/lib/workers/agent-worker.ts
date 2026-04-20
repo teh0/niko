@@ -107,8 +107,17 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
   // Tech Lead in 'breakdown' mode produces the ticket list — materialize
   // it into the DB so the backlog fills up and the flow can start
   // dispatching tickets to devs.
-  if (role === "TECH_LEAD" && input.mode === "breakdown") {
+  const isBreakdown = role === "TECH_LEAD" && input.mode === "breakdown";
+  if (isBreakdown) {
     await persistTicketBreakdown(projectId, output);
+  }
+
+  // Breakdown produces tickets in DB only — no code to review, no PR
+  // to merge. If the agent accidentally wrote files, we discard them
+  // rather than opening an orphan PR.
+  if (isBreakdown) {
+    await enqueueNext({ id: projectId });
+    return;
   }
 
   // Resolve the ticket's title if this run is implementing a ticket —

@@ -2,23 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, MessageSquareText, X } from "lucide-react";
+import { Check, MessageSquareText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type PendingAction = null | "APPROVED" | "CHANGES_REQUESTED" | "REJECTED";
-
 export function GateActions({ gateId }: { gateId: string }) {
   const router = useRouter();
-  const [pending, setPending] = useState<PendingAction>(null);
+  const [busy, setBusy] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
 
-  const busy = pending !== null;
-
   async function decide(decision: "APPROVED" | "CHANGES_REQUESTED" | "REJECTED") {
     if (busy) return;
-    setPending(decision);
+    setBusy(true);
     try {
       const res = await fetch(`/api/gates/${gateId}/decide`, {
         method: "POST",
@@ -31,9 +27,9 @@ export function GateActions({ gateId }: { gateId: string }) {
       if (!res.ok) throw new Error(await res.text());
       router.refresh();
     } catch (err) {
-      alert("Échec : " + (err instanceof Error ? err.message : String(err)));
+      alert("Failed: " + (err instanceof Error ? err.message : String(err)));
     } finally {
-      setPending(null);
+      setBusy(false);
       setFeedbackOpen(false);
       setFeedback("");
     }
@@ -48,7 +44,6 @@ export function GateActions({ gateId }: { gateId: string }) {
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="Feedback…"
             className="w-48 h-8 text-xs"
-            disabled={busy}
           />
           <Button
             size="sm"
@@ -56,16 +51,12 @@ export function GateActions({ gateId }: { gateId: string }) {
             onClick={() => decide("CHANGES_REQUESTED")}
             disabled={busy}
           >
-            {pending === "CHANGES_REQUESTED" ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : null}
-            {pending === "CHANGES_REQUESTED" ? "Envoi…" : "Envoyer"}
+            Send
           </Button>
           <Button
             size="icon"
             variant="ghost"
             onClick={() => setFeedbackOpen(false)}
-            disabled={busy}
           >
             <X className="size-4" />
           </Button>
@@ -73,12 +64,8 @@ export function GateActions({ gateId }: { gateId: string }) {
       ) : (
         <>
           <Button size="sm" onClick={() => decide("APPROVED")} disabled={busy}>
-            {pending === "APPROVED" ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Check className="size-3.5" />
-            )}
-            {pending === "APPROVED" ? "Approbation…" : "Approuver"}
+            <Check className="size-3.5" />
+            Approve
           </Button>
           <Button
             size="sm"
@@ -87,7 +74,7 @@ export function GateActions({ gateId }: { gateId: string }) {
             disabled={busy}
           >
             <MessageSquareText className="size-3.5" />
-            Demander des changements
+            Request changes
           </Button>
         </>
       )}
