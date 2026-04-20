@@ -88,7 +88,7 @@ done
 
 # ─── 4. Claude MAX login (inside worker container, one-time) ────────────
 CLAUDE_OK=0
-if $COMPOSE exec -T worker claude /status >/dev/null 2>&1; then
+if $COMPOSE exec -T worker claude auth status 2>&1 | grep -qi 'logged in'; then
   CLAUDE_OK=1
 fi
 

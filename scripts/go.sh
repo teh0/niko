@@ -56,9 +56,9 @@ fi
 if ! command -v claude >/dev/null 2>&1; then
   die "Claude CLI not installed. Install: npm install -g @anthropic-ai/claude-code"
 fi
-if ! claude /status >/dev/null 2>&1; then
-  warn "Claude CLI not logged in. Running 'claude login' now — follow the browser prompt."
-  claude login
+if ! claude auth status >/dev/null 2>&1; then
+  warn "Claude CLI not logged in. Running 'claude auth login' now — follow the browser prompt."
+  claude auth login
 fi
 ok "Claude CLI ready."
 

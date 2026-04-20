@@ -110,17 +110,17 @@ ok "Schema applied."
 
 # ─── 6. Claude MAX auth ─────────────────────────────────────────────────
 if command -v claude >/dev/null 2>&1; then
-  if claude /status 2>&1 | grep -qi 'api key'; then
+  if claude auth status 2>&1 | grep -qiE 'api\s*key'; then
     warn "Claude CLI is using an API key, not the MAX OAuth session."
-    warn "For the Niko studio, prefer: 'claude logout && claude login' to switch to MAX."
-  elif claude /status >/dev/null 2>&1; then
+    warn "For the Niko studio, prefer: 'claude auth logout && claude auth login' to switch to MAX."
+  elif claude auth status 2>&1 | grep -qi 'logged in'; then
     ok "Claude CLI authenticated."
   else
-    warn "Claude CLI installed but not logged in. Run: claude login"
+    warn "Claude CLI installed but not logged in. Run: claude auth login"
   fi
 else
-  warn "Claude CLI not found. Install:  npm install -g @anthropic-ai/claude-code"
-  warn "Then: claude login"
+  warn "Claude CLI not found. Install via the native installer:  curl -fsSL https://claude.ai/install.sh | bash"
+  warn "Then: claude auth login"
 fi
 
 # ─── 7. Next steps ──────────────────────────────────────────────────────
