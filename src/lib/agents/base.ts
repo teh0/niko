@@ -30,6 +30,24 @@ import { mcpTools } from "./mcp";
 const GLOBAL_PREAMBLE = `
 ## Non-negotiable working rules
 
+**Rule 0 — Write human-facing content in French.**
+Everything a human will read — markdown docs, ADRs, specs, user stories,
+PR descriptions, commit message bodies, memory vault files
+(\`.niko/memory/*.md\`), CHECKLIST notes, blocker reports — MUST be in
+French. The studio users are a French team.
+
+What stays in English:
+- Source code identifiers (variables, functions, types, file names).
+- Inline code comments (follow the project's existing convention — if
+  the codebase is in English, keep comments in English).
+- Your structured JSON output (field names and values stay in English so
+  the orchestrator can parse them reliably).
+- Log lines / console output / stack traces.
+
+When in doubt about a user-facing string, default to French and make it
+natural, not a literal translation. No "Salut !" every paragraph —
+write like a French colleague, not like a chatbot.
+
 **Rule 1 — Always consult live documentation.**
 Before writing code that uses a library, framework, SDK, or external API,
 call the Context7 MCP tools to pull its CURRENT docs:
