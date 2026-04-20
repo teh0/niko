@@ -233,13 +233,21 @@ function AgentCard({
   const isQueued = active?.status === "QUEUED";
 
   const stateColor = isWorking
-    ? "border-blue-200 bg-blue-50/40"
+    ? "border-blue-200 bg-blue-50/40 hover:bg-blue-50/60"
     : isQueued
-      ? "border-amber-200 bg-amber-50/40"
-      : "";
+      ? "border-amber-200 bg-amber-50/40 hover:bg-amber-50/60"
+      : "hover:bg-muted/40";
+
+  // Whichever run to link to: prefer the active one (live logs) else last finished.
+  const linkRun = active?.id ?? lastFinished?.id;
+  const CardTag: React.ElementType = linkRun ? Link : "div";
+  const cardProps: Record<string, unknown> = linkRun
+    ? { href: `/projects/${projectId}/runs/${linkRun}` }
+    : {};
 
   return (
-    <Card className={cn("p-4 transition-all", stateColor)}>
+    <CardTag {...cardProps} className="block">
+    <Card className={cn("p-4 transition-all", stateColor, linkRun && "cursor-pointer")}>
       <div className="flex items-start gap-3">
         <div className="shrink-0 size-9 rounded-lg bg-background border border-border flex items-center justify-center text-lg">
           {meta.emoji}
@@ -309,16 +317,14 @@ function AgentCard({
           {totalRuns} run{totalRuns > 1 ? "s" : ""}
           {successRate != null && <> · {Math.round(successRate * 100)}% ok</>}
         </div>
-        {totalRuns > 0 && (
-          <Link
-            href={`/projects/${projectId}/runs`}
-            className="text-primary hover:underline inline-flex items-center gap-0.5"
-          >
-            runs <ArrowRight className="size-2.5" />
-          </Link>
+        {linkRun && (
+          <span className="text-primary inline-flex items-center gap-0.5">
+            {isWorking ? "live logs" : "logs"} <ArrowRight className="size-2.5" />
+          </span>
         )}
       </div>
     </Card>
+    </CardTag>
   );
 }
 

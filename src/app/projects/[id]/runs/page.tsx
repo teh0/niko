@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { CheckCircle2, XCircle, Activity, CircleDashed, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, XCircle, Activity, CircleDashed, Loader2, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -45,7 +46,7 @@ export default async function ProjectRunsPage({
         <Section title="Live" hint="Agents working right now">
           <Card className="divide-y divide-border border-blue-200 bg-blue-50/40">
             {running.map((r) => (
-              <RunRow key={r.id} run={r} live />
+              <RunRow key={r.id} run={r} projectId={id} live />
             ))}
           </Card>
         </Section>
@@ -56,7 +57,7 @@ export default async function ProjectRunsPage({
         <Section title="Queued" hint="Waiting for a worker slot">
           <Card className="divide-y divide-border">
             {queued.map((r) => (
-              <RunRow key={r.id} run={r} />
+              <RunRow key={r.id} run={r} projectId={id} />
             ))}
           </Card>
         </Section>
@@ -72,7 +73,7 @@ export default async function ProjectRunsPage({
         ) : (
           <Card className="divide-y divide-border">
             {recent.map((r) => (
-              <RunRow key={r.id} run={r} />
+              <RunRow key={r.id} run={r} projectId={id} />
             ))}
           </Card>
         )}
@@ -103,6 +104,7 @@ function Section({
 
 function RunRow({
   run,
+  projectId,
   live,
 }: {
   run: {
@@ -117,6 +119,7 @@ function RunRow({
     tokensIn: number | null;
     tokensOut: number | null;
   };
+  projectId: string;
   live?: boolean;
 }) {
   const { Icon, color, bg } = statusStyle(run.status);
@@ -127,27 +130,35 @@ function RunRow({
     : null;
 
   return (
-    <div className="px-4 py-3 flex items-start gap-3">
+    <div className="group px-4 py-3 flex items-start gap-3 hover:bg-muted/40 transition-colors">
       <div className={cn("mt-0.5 shrink-0 size-8 rounded-full flex items-center justify-center", bg)}>
         <Icon className={cn("size-4", color, live && "animate-spin")} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="font-mono text-[10px]">
-            {run.role}
-          </Badge>
-          <span className="text-sm font-medium truncate">{run.task}</span>
-        </div>
-        <div className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap">
-          <StatusPill status={run.status} />
-          <span>· {relativeTime(run.createdAt)}</span>
-          {duration && <span>· {duration}</span>}
-          {run.tokensIn != null && run.tokensOut != null && (
-            <span>
-              · {run.tokensIn.toLocaleString()} / {run.tokensOut.toLocaleString()} tokens
+        <Link
+          href={`/projects/${projectId}/runs/${run.id}`}
+          className="block"
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {run.role}
+            </Badge>
+            <span className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+              {run.task}
             </span>
-          )}
-        </div>
+            <ChevronRight className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap">
+            <StatusPill status={run.status} />
+            <span>· {relativeTime(run.createdAt)}</span>
+            {duration && <span>· {duration}</span>}
+            {run.tokensIn != null && run.tokensOut != null && (
+              <span>
+                · {run.tokensIn.toLocaleString()} / {run.tokensOut.toLocaleString()} tokens
+              </span>
+            )}
+          </div>
+        </Link>
         {run.error && (
           <RunErrorDetail
             error={run.error}
