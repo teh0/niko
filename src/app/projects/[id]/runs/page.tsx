@@ -1,231 +1,197 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { CheckCircle2, XCircle, Activity, CircleDashed, Loader2, ChevronRight } from "lucide-react";
+import { Activity } from "lucide-react";
+import type { AgentRun } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { RunErrorDetail } from "./run-error";
 import { AutoRefresh } from "./auto-refresh";
+import { RoleFilter, RunGroup } from "./client";
+import { RunRow, formatDuration, type GroupedRuns } from "./shared";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectRunsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ role?: string }>;
 }) {
   const { id } = await params;
+  const { role: roleFilter } = await searchParams;
   const project = await prisma.project.findUnique({
     where: { id },
-    include: { agentRuns: { orderBy: { createdAt: "desc" }, take: 50 } },
+    include: { agentRuns: { orderBy: { createdAt: "desc" }, take: 200 } },
   });
   if (!project) notFound();
 
-  const running = project.agentRuns.filter((r) => r.status === "RUNNING");
-  const queued = project.agentRuns.filter((r) => r.status === "QUEUED");
-  const recent = project.agentRuns.filter(
+  // Stats on the full set (not filtered).
+  const all = project.agentRuns;
+  const running = all.filter((r) => r.status === "RUNNING");
+  const queued = all.filter((r) => r.status === "QUEUED");
+  const succeeded = all.filter((r) => r.status === "SUCCEEDED").length;
+  const failed = all.filter((r) => r.status === "FAILED").length;
+  const totalTokens = all.reduce(
+    (n, r) => n + (r.tokensIn ?? 0) + (r.tokensOut ?? 0),
+    0,
+  );
+  const totalMs = all.reduce((n, r) => {
+    if (!r.startedAt) return n;
+    const end = r.endedAt ?? new Date();
+    return n + (new Date(end).getTime() - new Date(r.startedAt).getTime());
+  }, 0);
+  const roles = Array.from(new Set(all.map((r) => r.role)));
+
+  // Apply role filter.
+  const filtered = roleFilter ? all.filter((r) => r.role === roleFilter) : all;
+  const filteredRunning = filtered.filter((r) => r.status === "RUNNING");
+  const filteredQueued = filtered.filter((r) => r.status === "QUEUED");
+  const filteredHistory = filtered.filter(
     (r) => r.status !== "RUNNING" && r.status !== "QUEUED",
   );
 
+  const groups = groupRuns(filteredHistory);
   const hasActive = running.length > 0 || queued.length > 0;
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
+    <div className="px-8 py-8 max-w-5xl">
       {hasActive && <AutoRefresh intervalMs={3000} />}
+
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Agent runs</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Every time an agent picked up a task — live, queued, and history.
-          {hasActive && " (auto-refreshes every 3s while work is in flight)"}
+          Every invocation of an agent on this project.
+          {hasActive && " Live auto-refreshes every 3s."}
         </p>
       </header>
 
-      {/* LIVE — running right now */}
-      {running.length > 0 && (
-        <Section title="Live" hint="Agents working right now">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
+        <StatTile label="Total" value={all.length} />
+        <StatTile label="Live" value={running.length} tone="blue" />
+        <StatTile label="Succeeded" value={succeeded} tone="emerald" />
+        <StatTile label="Failed" value={failed} tone="red" />
+        <StatTile
+          label="Tokens"
+          value={totalTokens}
+          secondary={totalMs > 0 ? formatDuration(totalMs) : undefined}
+        />
+      </div>
+
+      {roles.length > 1 && (
+        <RoleFilter roles={roles} active={roleFilter} projectId={id} />
+      )}
+
+      {filteredRunning.length > 0 && (
+        <section className="mb-6">
+          <SectionHeader title="Live" hint="Working right now" />
           <Card className="divide-y divide-border border-blue-200 bg-blue-50/40">
-            {running.map((r) => (
+            {filteredRunning.map((r) => (
               <RunRow key={r.id} run={r} projectId={id} live />
             ))}
           </Card>
-        </Section>
+        </section>
       )}
 
-      {/* QUEUED — waiting for a worker */}
-      {queued.length > 0 && (
-        <Section title="Queued" hint="Waiting for a worker slot">
+      {filteredQueued.length > 0 && (
+        <section className="mb-6">
+          <SectionHeader title="Queued" hint="Waiting for a worker slot" />
           <Card className="divide-y divide-border">
-            {queued.map((r) => (
+            {filteredQueued.map((r) => (
               <RunRow key={r.id} run={r} projectId={id} />
             ))}
           </Card>
-        </Section>
+        </section>
       )}
 
-      {/* HISTORY */}
-      <Section title="History">
-        {recent.length === 0 ? (
+      <section>
+        <SectionHeader
+          title="History"
+          hint={
+            groups.length
+              ? `${groups.length} group${groups.length > 1 ? "s" : ""}`
+              : undefined
+          }
+        />
+        {groups.length === 0 ? (
           <Card className="p-12 text-center border-dashed">
             <Activity className="mx-auto size-6 text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">No past runs.</p>
+            <p className="text-sm text-muted-foreground">
+              {roleFilter ? `No past runs for ${roleFilter}.` : "No past runs yet."}
+            </p>
           </Card>
         ) : (
-          <Card className="divide-y divide-border">
-            {recent.map((r) => (
-              <RunRow key={r.id} run={r} projectId={id} />
+          <div className="space-y-2">
+            {groups.map((g) => (
+              <RunGroup key={g.key} group={g} projectId={id} />
             ))}
-          </Card>
+          </div>
         )}
-      </Section>
+      </section>
     </div>
   );
 }
 
-function Section({
-  title,
-  hint,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-6">
-      <div className="mb-2 flex items-baseline gap-3">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function RunRow({
-  run,
-  projectId,
-  live,
-}: {
-  run: {
-    id: string;
-    role: string;
-    task: string;
-    status: string;
-    error: string | null;
-    startedAt: Date | null;
-    endedAt: Date | null;
-    createdAt: Date;
-    tokensIn: number | null;
-    tokensOut: number | null;
-  };
-  projectId: string;
-  live?: boolean;
-}) {
-  const { Icon, color, bg } = statusStyle(run.status);
-  const duration = run.startedAt
-    ? formatDuration(
-        (run.endedAt ?? new Date()).getTime() - run.startedAt.getTime(),
-      )
-    : null;
-
-  return (
-    <div className="group px-4 py-3 flex items-start gap-3 hover:bg-muted/40 transition-colors">
-      <div className={cn("mt-0.5 shrink-0 size-8 rounded-full flex items-center justify-center", bg)}>
-        <Icon className={cn("size-4", color, live && "animate-spin")} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <Link
-          href={`/projects/${projectId}/runs/${run.id}`}
-          className="block"
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className="font-mono text-[10px]">
-              {run.role}
-            </Badge>
-            <span className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-              {run.task}
-            </span>
-            <ChevronRight className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <div className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap">
-            <StatusPill status={run.status} />
-            <span>· {relativeTime(run.createdAt)}</span>
-            {duration && <span>· {duration}</span>}
-            {run.tokensIn != null && run.tokensOut != null && (
-              <span>
-                · {run.tokensIn.toLocaleString()} / {run.tokensOut.toLocaleString()} tokens
-              </span>
-            )}
-          </div>
-        </Link>
-        {run.error && (
-          <RunErrorDetail
-            error={run.error}
-            runId={run.id}
-            retryable={run.status === "FAILED"}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function StatusPill({ status }: { status: string }) {
-  const { color, bg } = statusStyle(status);
-  return (
-    <span
-      className={cn(
-        "uppercase tracking-wider font-mono text-[10px] px-1.5 py-0.5 rounded",
-        color,
-        bg,
-      )}
-    >
-      {status}
-    </span>
-  );
-}
-
-function statusStyle(status: string) {
-  switch (status) {
-    case "SUCCEEDED":
-      return {
-        Icon: CheckCircle2,
-        color: "text-emerald-600",
-        bg: "bg-emerald-50",
-      };
-    case "FAILED":
-      return { Icon: XCircle, color: "text-red-600", bg: "bg-red-50" };
-    case "RUNNING":
-      return { Icon: Loader2, color: "text-blue-600", bg: "bg-blue-50" };
-    case "CANCELLED":
-      return { Icon: XCircle, color: "text-muted-foreground", bg: "bg-muted" };
-    default:
-      return {
-        Icon: CircleDashed,
-        color: "text-muted-foreground",
-        bg: "bg-muted",
-      };
+/** Collapse consecutive runs with the same (role, task) into one group. */
+function groupRuns(runs: AgentRun[]): GroupedRuns[] {
+  const out: GroupedRuns[] = [];
+  for (const r of runs) {
+    const last = out[out.length - 1];
+    if (last && last.role === r.role && last.task === r.task) {
+      last.runs.push(r);
+      last.statusMix[r.status] = (last.statusMix[r.status] ?? 0) + 1;
+    } else {
+      out.push({
+        key: r.id,
+        role: r.role,
+        task: r.task,
+        runs: [r],
+        statusMix: { [r.status]: 1 },
+        latestCreatedAt: r.createdAt,
+      });
+    }
   }
+  return out;
 }
 
-function relativeTime(date: Date): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
+function StatTile({
+  label,
+  value,
+  tone,
+  secondary,
+}: {
+  label: string;
+  value: number;
+  tone?: "blue" | "emerald" | "red";
+  secondary?: string;
+}) {
+  const toneCls =
+    tone === "blue"
+      ? "text-blue-600"
+      : tone === "emerald"
+        ? "text-emerald-600"
+        : tone === "red"
+          ? "text-red-600"
+          : "";
+  return (
+    <Card className="p-3">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className={cn("text-2xl font-semibold tabular-nums mt-1", toneCls)}>
+        {value.toLocaleString()}
+      </div>
+      {secondary && (
+        <div className="text-[11px] text-muted-foreground mt-0.5">{secondary}</div>
+      )}
+    </Card>
+  );
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const remS = s % 60;
-  return `${m}m ${remS}s`;
+function SectionHeader({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="mb-2 flex items-baseline gap-3">
+      <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+    </div>
+  );
 }
