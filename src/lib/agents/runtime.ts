@@ -125,6 +125,8 @@ function errorSignature(text: string): string | null {
     "enoent",
     "eaddrinuse",
     "econnrefused",
+    "does not exist", // Claude Code's Read tool when path is wrong
+    "no such file",
     "  at ", // stack frames
   ];
   const lower = text.toLowerCase();

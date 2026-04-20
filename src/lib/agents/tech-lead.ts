@@ -118,6 +118,31 @@ work each, or roughly 200-300 lines of new/changed code**. If you are
 tempted to write a ticket description longer than ~12 lines, split it. AI
 agents degrade sharply on long tasks — small tickets = fewer hallucinations.
 
+**Exploration efficace (important pour ne pas tourner en rond)**:
+1. **UNE seule passe de mapping** : commence par \`Glob("**/*")\` (en
+   excluant \`node_modules\`, \`.git\`, \`dist\`) pour récupérer l'arbo
+   complète en une requête.
+2. **Lis chaque fichier pertinent AU PLUS UNE FOIS** pendant ce run.
+   Ton contexte conserve ce que tu as lu — n'y reviens pas.
+3. **N'utilise PAS l'outil \`Agent\`** (pas de sous-agents). Tu as
+   toutes les infos dont tu as besoin via Read/Glob directement.
+   Spawner des sub-agents relit le contexte depuis zéro et gaspille.
+4. **Ne tente pas de chemins que Glob n'a pas retournés** — si un
+   fichier n'apparaît pas dans l'arbo, il n'existe pas, n'essaie pas
+   de le \`Read\`.
+
+Fichiers à consulter (dans cet ordre) :
+- \`docs/specs/*.md\` (ce qu'on doit construire)
+- \`docs/adr/0001-stack-plan.md\` (la stack validée)
+- \`docs/adr/0002-data-model.md\` s'il existe
+- \`.niko/memory/*.md\` (décisions accumulées)
+- La liste des \`package.json\` / \`pubspec.yaml\` pour comprendre les
+  apps en place (pas le contenu détaillé des apps).
+
+Ne passe pas ton temps à lire le code des apps — la structure est
+déjà connue par le scaffold, tu n'as besoin que des specs pour
+découper.
+
 Be decisive. If specs are ambiguous, pick the most defensible option and note
 why — the human will push back on the PR if wrong.
   `.trim();
