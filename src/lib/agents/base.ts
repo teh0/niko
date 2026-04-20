@@ -235,8 +235,12 @@ export abstract class BaseAgent<TOutput = unknown> {
     return 100;
   }
 
-  /** Final system prompt sent to Claude — preamble + agent-specific prompt. */
-  protected fullSystemPrompt(): string {
+  /**
+   * Final system prompt sent to Claude — preamble + agent-specific prompt.
+   * Takes the run's input so multi-mode agents (Tech Lead with
+   * plan/scaffold/breakdown) can include only the section that applies.
+   */
+  protected fullSystemPrompt(_input?: Record<string, unknown>): string {
     return `${GLOBAL_PREAMBLE}\n\n---\n\n${this.systemPrompt}`;
   }
 
@@ -281,7 +285,7 @@ export abstract class BaseAgent<TOutput = unknown> {
 
     try {
       const result = await runAgent({
-        systemPrompt: this.fullSystemPrompt(),
+        systemPrompt: this.fullSystemPrompt(ctx.input),
         prompt: this.buildPrompt(ctx),
         cwd: ctx.workspace.path,
         allowedTools: this.fullAllowedTools(),
