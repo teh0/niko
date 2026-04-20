@@ -60,7 +60,7 @@ export function ProjectSidebar({
   ];
 
   return (
-    <aside className="border-r border-border bg-muted/30 flex flex-col">
+    <aside className="sticky top-14 self-start h-[calc(100vh-3.5rem)] border-r border-border bg-muted/30 flex flex-col">
       <div className="p-3">
         <ProjectSwitcher
           currentId={projectId}
