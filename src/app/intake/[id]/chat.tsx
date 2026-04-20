@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Markdown } from "@/components/markdown";
+import { TypingDots } from "@/components/typing-dots";
+import { Bot as BotAvatar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Msg = { id: string; role: "USER" | "AGENT" | "SYSTEM"; content: string };
@@ -128,6 +130,16 @@ export function IntakeChat({
         {visibleMessages.map((m) => (
           <Bubble key={m.id} msg={m} />
         ))}
+        {streaming && !pending && (
+          <div className="flex gap-2 justify-start">
+            <div className="shrink-0 size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-0.5">
+              <BotAvatar className="size-3.5" />
+            </div>
+            <div className="rounded-2xl rounded-bl-sm bg-muted border border-border text-muted-foreground px-4 py-2">
+              <TypingDots />
+            </div>
+          </div>
+        )}
         {pending && (
           <Bubble msg={{ id: "pending", role: "AGENT", content: pending }} streaming />
         )}
@@ -194,7 +206,7 @@ function Bubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed break-words",
           isUser
             ? "bg-primary text-primary-foreground whitespace-pre-wrap rounded-br-sm"
-            : "bg-muted text-foreground rounded-bl-sm",
+            : "bg-muted text-foreground border border-border rounded-bl-sm",
         )}
       >
         {isUser ? (

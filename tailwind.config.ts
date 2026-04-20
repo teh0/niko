@@ -11,11 +11,7 @@ export default {
     },
     extend: {
       colors: {
-        // Niko named palette — still used in legacy places; safe to keep.
-        bg: "#0a0a0b",
-        panel: "#111114",
-        muted: "#6b7280",
-        fg: "#e5e7eb",
+        // Semantic status colors — used directly in some UI.
         ok: "#10b981",
         warn: "#f59e0b",
         danger: "#ef4444",
@@ -38,7 +34,7 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
-        "muted-shadcn": {
+        muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
         },

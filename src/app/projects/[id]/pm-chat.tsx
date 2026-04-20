@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { TypingDots } from "@/components/typing-dots";
 import { cn } from "@/lib/utils";
 
 type Msg = {
@@ -167,6 +168,16 @@ export function PmChat({ projectId }: { projectId: string }) {
               {visibleMessages.map((m) => (
                 <Bubble key={m.id} msg={m} />
               ))}
+              {streaming && !pending && (
+                <div className="flex gap-2 justify-start">
+                  <div className="shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-0.5">
+                    <Bot className="size-3" />
+                  </div>
+                  <div className="rounded-2xl rounded-bl-sm bg-muted border border-border text-muted-foreground px-3.5 py-2">
+                    <TypingDots />
+                  </div>
+                </div>
+              )}
               {pending && (
                 <Bubble msg={{ id: "pending", role: "AGENT", content: pending }} streaming />
               )}
@@ -215,7 +226,7 @@ function Bubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
             "rounded-2xl px-3.5 py-2 text-xs leading-relaxed",
             isUser
               ? "bg-primary text-primary-foreground whitespace-pre-wrap rounded-br-sm"
-              : "bg-muted text-foreground rounded-bl-sm",
+              : "bg-muted text-foreground border border-border rounded-bl-sm",
           )}
         >
           {isUser ? (

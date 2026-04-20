@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TypingDots } from "@/components/typing-dots";
 import { cn } from "@/lib/utils";
 
 type Msg = { id: string; role: "USER" | "AGENT" | "SYSTEM"; content: string };
@@ -145,6 +146,13 @@ export function GateChat({
             {visibleMessages.map((m) => (
               <GateBubble key={m.id} msg={m} />
             ))}
+            {streaming && !pending && (
+              <div className="flex justify-start">
+                <div className="bg-muted border border-border rounded-xl rounded-bl-sm px-3 py-2 text-muted-foreground">
+                  <TypingDots />
+                </div>
+              </div>
+            )}
             {pending && (
               <GateBubble
                 msg={{ id: "pending", role: "AGENT", content: pending }}
@@ -188,7 +196,7 @@ function GateBubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
           "max-w-[90%] rounded-xl px-3 py-2 text-xs leading-relaxed break-words",
           isUser
             ? "bg-primary text-primary-foreground whitespace-pre-wrap rounded-br-sm"
-            : "bg-muted text-foreground rounded-bl-sm",
+            : "bg-muted text-foreground border border-border rounded-bl-sm",
         )}
       >
         {isUser ? (
