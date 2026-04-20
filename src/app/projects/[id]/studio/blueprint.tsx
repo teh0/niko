@@ -160,31 +160,85 @@ function node(
 
 const NODE_TYPES = { agent: AgentNode };
 
+type NodeState = "working" | "queued" | "failed" | "succeeded" | "idle";
+
+function agentState(snap?: AgentSnap): NodeState {
+  if (snap?.activeStatus === "RUNNING") return "working";
+  if (snap?.activeStatus === "QUEUED") return "queued";
+  if (!snap || snap.totalRuns === 0) return "idle";
+  if (snap.lastStatus === "FAILED") return "failed";
+  if (snap.lastStatus === "SUCCEEDED") return "succeeded";
+  return "idle";
+}
+
+const STATE_STYLE: Record<
+  NodeState,
+  { box: string; label: string; labelText: string; glyph: React.ReactNode | null }
+> = {
+  working: {
+    box: "border-2 border-blue-500 bg-white ring-4 ring-blue-100 shadow-lg shadow-blue-200/60",
+    label: "text-blue-700",
+    labelText: "en cours",
+    glyph: (
+      <span className="absolute -top-1.5 -right-1.5 flex size-3.5">
+        <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60 animate-ping" />
+        <span className="relative inline-flex size-3.5 rounded-full bg-blue-500 ring-2 ring-white" />
+      </span>
+    ),
+  },
+  queued: {
+    box: "border-2 border-amber-400 border-dashed bg-amber-50/50 ring-2 ring-amber-100",
+    label: "text-amber-700",
+    labelText: "en attente",
+    glyph: (
+      <span className="absolute -top-1.5 -right-1.5 size-3.5 rounded-full bg-amber-400 ring-2 ring-white" />
+    ),
+  },
+  failed: {
+    box: "border-2 border-red-400 bg-red-50/40 ring-2 ring-red-100",
+    label: "text-red-700",
+    labelText: "dernier run : échec",
+    glyph: (
+      <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center size-4 rounded-full bg-red-500 text-white text-[10px] ring-2 ring-white font-bold">
+        !
+      </span>
+    ),
+  },
+  succeeded: {
+    box: "border border-emerald-300 bg-white",
+    label: "text-emerald-700",
+    labelText: "disponible",
+    glyph: (
+      <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center size-4 rounded-full bg-emerald-500 text-white text-[10px] ring-2 ring-white">
+        ✓
+      </span>
+    ),
+  },
+  idle: {
+    box: "border border-dashed border-border bg-muted/20 opacity-80",
+    label: "text-muted-foreground",
+    labelText: "pas encore sollicité",
+    glyph: null,
+  },
+};
+
 function AgentNode({ data }: NodeProps<Node<NodeData>>) {
   const snap = data.snap;
-  const isWorking = snap?.activeStatus === "RUNNING";
-  const isQueued = snap?.activeStatus === "QUEUED";
-  const hasHistory = (snap?.totalRuns ?? 0) > 0;
-
-  const clickable = Boolean(snap?.activeRunId || (hasHistory && snap?.lastStatus));
+  const state = agentState(snap);
+  const style = STATE_STYLE[state];
+  const clickable = Boolean(
+    snap?.activeRunId || (snap && snap.totalRuns > 0),
+  );
 
   const content = (
     <div
       className={cn(
-        "relative rounded-xl border bg-white shadow-sm px-3.5 py-2.5 min-w-[180px] transition-all",
-        isWorking && "border-blue-400 shadow-lg shadow-blue-200/50 ring-2 ring-blue-100",
-        isQueued && "border-amber-300 ring-2 ring-amber-50",
-        !isWorking && !isQueued && "border-border",
-        clickable && "cursor-pointer hover:border-foreground/30",
+        "relative rounded-xl px-3.5 py-2.5 min-w-[190px] transition-all",
+        style.box,
+        clickable && "cursor-pointer hover:border-foreground/40",
       )}
     >
-      {/* pulsing dot for live activity */}
-      {isWorking && (
-        <span className="absolute -top-1 -right-1 flex size-3">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 animate-ping" />
-          <span className="relative inline-flex size-3 rounded-full bg-blue-500" />
-        </span>
-      )}
+      {style.glyph}
 
       <Handle
         type="target"
@@ -193,30 +247,33 @@ function AgentNode({ data }: NodeProps<Node<NodeData>>) {
       />
 
       <div className="flex items-center gap-2">
-        <div className="size-8 rounded-md bg-muted flex items-center justify-center text-base shrink-0">
+        <div className="size-8 rounded-md bg-background border border-border flex items-center justify-center text-base shrink-0">
           {data.emoji}
         </div>
         <div className="min-w-0">
           <div className="text-[13px] font-semibold truncate">{data.label}</div>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-            {isWorking
-              ? "works now"
-              : isQueued
-                ? "queued"
-                : hasHistory
-                  ? snap?.lastStatus === "FAILED"
-                    ? "last: failed"
-                    : "idle"
-                  : "not yet"}
+          <div
+            className={cn(
+              "text-[10px] uppercase tracking-wider font-medium",
+              style.label,
+            )}
+          >
+            {style.labelText}
           </div>
         </div>
       </div>
 
-      {isWorking && snap?.activeTask && (
-        <div className="mt-2 pt-2 border-t border-border">
+      {state === "working" && snap?.activeTask && (
+        <div className="mt-2 pt-2 border-t border-blue-200/60">
           <div className="text-[11px] text-foreground/80 line-clamp-2 leading-snug">
             {snap.activeTicketTitle ?? snap.activeTask}
           </div>
+        </div>
+      )}
+
+      {snap && snap.totalRuns > 0 && state !== "working" && (
+        <div className="mt-1.5 text-[10px] text-muted-foreground tabular-nums">
+          {snap.totalRuns} run{snap.totalRuns > 1 ? "s" : ""}
         </div>
       )}
 
