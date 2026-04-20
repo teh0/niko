@@ -18,7 +18,12 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) return new Response("not found", { status: 404 });
 
-  // Cascade delete in DB (onDelete: Cascade is set on all child relations).
+  // IntakeSession → Project is SetNull (the session predates the project
+  // by schema design, so it survives a project deletion with projectId
+  // nulled). For a UI 'delete everything' intent, nuke the linked intake
+  // session + its messages too. Everything else cascades from Project.
+  await prisma.intakeSession.deleteMany({ where: { projectId: id } });
+
   await prisma.project.delete({ where: { id } });
 
   // Wipe local workspace. Ignore failure — the DB deletion already
