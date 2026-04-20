@@ -61,9 +61,11 @@ status: ## Show service status
 	@curl -s http://localhost/api/health || echo "  dashboard not reachable"
 
 login: ## Authenticate Claude MAX inside the worker container (interactive, one-time)
-	@echo "▶ Running 'claude auth login' inside the worker container."
-	@echo "  Copy the URL it prints, open it in your browser, paste the code back."
-	docker compose -f docker-compose.yml -f docker-compose.local.yml exec worker claude auth login
+	@echo "▶ Running 'claude setup-token' inside the worker container."
+	@echo "  (This flow works headless — auth login uses an OAuth redirect to"
+	@echo "   localhost which can't reach your browser from inside Docker.)"
+	@echo "  Copy the URL, sign in on your Mac, paste the token back here."
+	docker compose -f docker-compose.yml -f docker-compose.local.yml exec worker claude setup-token
 	@echo "▶ Verifying session:"
 	docker compose -f docker-compose.yml -f docker-compose.local.yml exec worker claude auth status
 
