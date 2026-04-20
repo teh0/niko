@@ -10,9 +10,37 @@
  */
 
 import { createHash } from "node:crypto";
+import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { query, type Options, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { env } from "../env";
 import { buildMcpServers } from "./mcp";
+
+/**
+ * Resolve the claude CLI to an absolute path.
+ * The SDK uses fs.existsSync() on the path we give it — a bare command
+ * name like "claude" always fails even when it's in $PATH. Run `which`
+ * once at module load to get the absolute path.
+ */
+let resolvedClaudePath: string | null = null;
+function resolveClaudePath(): string {
+  if (resolvedClaudePath) return resolvedClaudePath;
+  const configured = env.CLAUDE_CLI_PATH;
+  if (configured.startsWith("/") && existsSync(configured)) {
+    resolvedClaudePath = configured;
+    return resolvedClaudePath;
+  }
+  try {
+    resolvedClaudePath = execSync(`command -v ${configured}`, { encoding: "utf8" }).trim();
+    if (!resolvedClaudePath) throw new Error("empty");
+    return resolvedClaudePath;
+  } catch {
+    throw new Error(
+      `Could not locate the 'claude' CLI (CLAUDE_CLI_PATH="${configured}"). ` +
+        `Install via https://claude.ai/install.sh or set CLAUDE_CLI_PATH to an absolute path.`,
+    );
+  }
+}
 
 export class RateLimitError extends Error {
   constructor(
@@ -175,7 +203,7 @@ export async function runAgent(input: RunInput): Promise<RunResult> {
     maxTurns: input.maxTurns ?? 30,
     allowedTools: input.allowedTools,
     mcpServers: buildMcpServers({ includePlaywright: input.includePlaywright }),
-    pathToClaudeCodeExecutable: env.CLAUDE_CLI_PATH,
+    pathToClaudeCodeExecutable: resolveClaudePath(),
     env: childEnv,
   };
 

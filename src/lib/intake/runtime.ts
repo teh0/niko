@@ -5,10 +5,24 @@
  */
 
 import { tmpdir } from "node:os";
+import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { query, type Options, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { IntakeMessage } from "@prisma/client";
 import { env } from "../env";
 import { INTAKE_SYSTEM_PROMPT } from "./prompt";
+
+let resolvedClaudePath: string | null = null;
+function resolveClaudePath(): string {
+  if (resolvedClaudePath) return resolvedClaudePath;
+  const configured = env.CLAUDE_CLI_PATH;
+  if (configured.startsWith("/") && existsSync(configured)) {
+    resolvedClaudePath = configured;
+    return resolvedClaudePath;
+  }
+  resolvedClaudePath = execSync(`command -v ${configured}`, { encoding: "utf8" }).trim();
+  return resolvedClaudePath;
+}
 
 export type StreamEvent =
   | { type: "delta"; text: string }
@@ -47,7 +61,7 @@ export async function* streamIntakeReply(
     systemPrompt: INTAKE_SYSTEM_PROMPT,
     maxTurns: 3, // one reply = one turn; cap paranoically
     allowedTools: [], // no tool use, pure text
-    pathToClaudeCodeExecutable: env.CLAUDE_CLI_PATH,
+    pathToClaudeCodeExecutable: resolveClaudePath(),
     env: childEnv,
   };
 
