@@ -15,6 +15,7 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { AdvanceFlowButton } from "./advance-flow-button";
 
 export const dynamic = "force-dynamic";
 
@@ -54,11 +55,18 @@ export default async function ProjectOverviewPage({
 
   return (
     <div className="px-8 py-8 space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Overview of the studio&rsquo;s work on this project.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Vue d&rsquo;ensemble du travail du studio sur ce projet.
+          </p>
+        </div>
+        <AdvanceFlowButton
+          projectId={id}
+          variant={flowBlocked ? "default" : "outline"}
+          label={anyActive ? "Déjà en cours" : "Relancer le flow"}
+        />
       </header>
 
       {flowBlocked && latestRun && (
@@ -67,19 +75,21 @@ export default async function ProjectOverviewPage({
             <XCircle className="size-5 text-red-600 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-red-800">
-                Flow is blocked
+                Le flow est bloqué
               </div>
               <p className="mt-0.5 text-xs text-red-700">
-                The {latestRun.role} agent failed and no other work is queued.
-                Retry from the runs page, or talk to the PM if you want to
-                rescope.
+                L&rsquo;agent <span className="font-mono">{latestRun.role}</span>{" "}
+                a échoué et aucun autre travail n&rsquo;est en queue. Clique sur
+                « Relancer le flow » ci-dessus — l&rsquo;orchestrateur
+                ré-examinera l&rsquo;état du projet et enverra la prochaine
+                étape au bon agent.
               </p>
               <div className="mt-2">
                 <Link
                   href={`/projects/${id}/runs`}
                   className="text-xs font-medium text-red-700 hover:text-red-900 underline underline-offset-2"
                 >
-                  Go to runs →
+                  Voir les runs →
                 </Link>
               </div>
             </div>
