@@ -30,7 +30,9 @@ export default async function RunDetailPage({
   if (!run || run.projectId !== id) notFound();
 
   const live = run.status === "RUNNING" || run.status === "QUEUED";
-  const events = flattenTranscript(run.transcript);
+  // Show most recent first — on a live run the latest action is what you
+  // care about, and you don't have to scroll to find it.
+  const events = flattenTranscript(run.transcript).reverse();
 
   const duration = run.startedAt
     ? formatDuration(
@@ -81,7 +83,10 @@ export default async function RunDetailPage({
       <section className="space-y-3">
         <h2 className="text-sm font-semibold tracking-tight mb-2 flex items-center gap-2">
           <FileText className="size-4 text-muted-foreground" />
-          Activity {live && <span className="text-xs text-blue-600 font-normal">(live)</span>}
+          Activity
+          <span className="text-xs text-muted-foreground font-normal">
+            (newest first{live && " · live"})
+          </span>
         </h2>
         {events.length === 0 ? (
           <Card className="p-8 text-center border-dashed">

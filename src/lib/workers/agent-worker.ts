@@ -97,6 +97,13 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
 
   const { output, finalText } = await agent.run(ctx);
 
+  // Tech Lead in 'breakdown' mode produces the ticket list — materialize
+  // it into the DB so the backlog fills up and the flow can start
+  // dispatching tickets to devs.
+  if (role === "TECH_LEAD" && input.mode === "breakdown") {
+    await persistTicketBreakdown(projectId, output);
+  }
+
   // Commit + push whatever the agent changed.
   const committed = await commitAll(
     workspace,
@@ -211,6 +218,77 @@ function gateKindFor(
 
 // For use by a transcript stream consumer (future).
 export type AgentTranscriptMsg = SDKMessage;
+
+type ProposedTicket = {
+  title: string;
+  description: string;
+  role: "DEV_WEB" | "DEV_MOBILE" | "DEV_BACKEND" | "DB_EXPERT" | "QA";
+  priority?: number;
+  dependsOn?: string[];
+  acceptance?: string[];
+};
+
+/**
+ * Parse the Tech Lead's TicketBreakdownOutput and insert rows in the
+ * Ticket table. Resolves intra-batch `dependsOn` by title in a 2nd pass.
+ */
+async function persistTicketBreakdown(
+  projectId: string,
+  output: unknown,
+): Promise<void> {
+  if (!output || typeof output !== "object") return;
+  const proposed = (output as { tickets?: unknown }).tickets;
+  if (!Array.isArray(proposed)) return;
+
+  const validTickets: ProposedTicket[] = [];
+  for (const t of proposed) {
+    if (!t || typeof t !== "object") continue;
+    const tt = t as ProposedTicket;
+    if (
+      typeof tt.title === "string" &&
+      typeof tt.description === "string" &&
+      ["DEV_WEB", "DEV_MOBILE", "DEV_BACKEND", "DB_EXPERT", "QA"].includes(
+        tt.role as string,
+      )
+    ) {
+      validTickets.push(tt);
+    }
+  }
+  if (validTickets.length === 0) return;
+
+  // Pass 1 — create without deps.
+  const titleToId = new Map<string, string>();
+  for (const t of validTickets) {
+    const descriptionWithAcceptance = t.acceptance?.length
+      ? `${t.description}\n\n## Acceptance\n${t.acceptance.map((a) => `- ${a}`).join("\n")}`
+      : t.description;
+    const row = await prisma.ticket.create({
+      data: {
+        projectId,
+        title: t.title,
+        description: descriptionWithAcceptance,
+        role: t.role,
+        priority: t.priority ?? 0,
+        dependsOn: [],
+        status: "TODO",
+      },
+    });
+    titleToId.set(t.title, row.id);
+  }
+
+  // Pass 2 — resolve dependsOn by title.
+  for (const t of validTickets) {
+    if (!t.dependsOn?.length) continue;
+    const id = titleToId.get(t.title);
+    if (!id) continue;
+    const deps = t.dependsOn
+      .map((title) => titleToId.get(title))
+      .filter((x): x is string => Boolean(x));
+    if (deps.length) {
+      await prisma.ticket.update({ where: { id }, data: { dependsOn: deps } });
+    }
+  }
+}
 
 /**
  * Resolve everything the run needs before we hand off to the agent:
