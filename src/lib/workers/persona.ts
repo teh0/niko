@@ -135,6 +135,13 @@ export function frenchCommitSubject(
   return frenchTitle(role, task, input, ticketTitle);
 }
 
+export type DiffSummaryLite = {
+  filesChanged: number;
+  insertions: number;
+  deletions: number;
+  byFile: Array<{ path: string; insertions: number; deletions: number }>;
+};
+
 export function buildPRBody(args: {
   role: string;
   task: string;
@@ -142,6 +149,7 @@ export function buildPRBody(args: {
   output: unknown;
   ticketTitle?: string;
   iteration?: number;       // 2+ when it's a revision after CHANGES_REQUESTED
+  diff?: DiffSummaryLite | null;
 }): string {
   const persona =
     PERSONAS[args.role as PersonaKey] ??
@@ -152,7 +160,12 @@ export function buildPRBody(args: {
       ? `${persona.greet()} *(itération ${args.iteration} — j'ai repris tes retours.)*`
       : persona.greet();
 
-  const summary = args.finalText.slice(0, 4000).trim() || "_(pas de résumé texte)_";
+  // Isolate the agent's recap from the trailing JSON block (if any) —
+  // the JSON goes into a <details>, prose stays in the body.
+  const { prose } = splitRecapFromJson(args.finalText);
+  const summary = prose.slice(0, 6000).trim() || "_(pas de résumé texte fourni)_";
+
+  const diffBlock = args.diff ? formatDiffBlock(args.diff) : "";
 
   const jsonBlock = args.output
     ? `
@@ -171,6 +184,8 @@ ${greeting}
 
 ${summary}
 
+${diffBlock}
+
 ---
 
 **Que veux-tu faire ?**
@@ -182,4 +197,51 @@ ${jsonBlock}
 
 ${persona.signoff}
 `.trim();
+}
+
+function splitRecapFromJson(finalText: string): { prose: string } {
+  // Remove trailing ```json ... ``` fence so it doesn't show twice.
+  const stripped = finalText.replace(/```json\s*[\s\S]*?```\s*$/g, "").trim();
+  return { prose: stripped };
+}
+
+/**
+ * Render the diff as a compact '📂 Fichiers modifiés' section with
+ * grouped counts. Long file lists collapse into a <details>.
+ */
+function formatDiffBlock(d: DiffSummaryLite): string {
+  if (d.filesChanged === 0) return "";
+
+  const header = `**📂 Fichiers modifiés** — ${d.filesChanged} fichier${d.filesChanged > 1 ? "s" : ""}, +${d.insertions} / −${d.deletions}`;
+
+  // Group by top-level folder to keep the preview readable.
+  const groups = new Map<string, { files: number; ins: number; del: number }>();
+  for (const f of d.byFile) {
+    const top = f.path.split("/")[0] || "(root)";
+    const g = groups.get(top) ?? { files: 0, ins: 0, del: 0 };
+    g.files += 1;
+    g.ins += f.insertions;
+    g.del += f.deletions;
+    groups.set(top, g);
+  }
+  const groupLines = Array.from(groups.entries())
+    .sort(([, a], [, b]) => b.files - a.files)
+    .slice(0, 10)
+    .map(
+      ([top, g]) =>
+        `- \`${top}/\` — ${g.files} fichier${g.files > 1 ? "s" : ""} (+${g.ins} / −${g.del})`,
+    )
+    .join("\n");
+
+  const fullList =
+    d.byFile.length > 20
+      ? `\n\n<details>\n<summary>Voir les ${d.byFile.length} fichiers en détail</summary>\n\n${d.byFile
+          .slice(0, 200)
+          .map((f) => `- \`${f.path}\` (+${f.insertions} / −${f.deletions})`)
+          .join("\n")}${d.byFile.length > 200 ? `\n- _(+${d.byFile.length - 200} autres)_` : ""}\n\n</details>`
+      : `\n\n${d.byFile
+          .map((f) => `- \`${f.path}\` (+${f.insertions} / −${f.deletions})`)
+          .join("\n")}`;
+
+  return `---\n\n${header}\n\n${groupLines}${fullList}`;
 }

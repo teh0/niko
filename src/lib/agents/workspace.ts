@@ -115,6 +115,46 @@ export async function checkoutBranch(
   await git(ws.path, ["checkout", "-B", branch]);
 }
 
+export type DiffSummary = {
+  filesChanged: number;
+  insertions: number;
+  deletions: number;
+  byFile: Array<{ path: string; insertions: number; deletions: number }>;
+};
+
+/**
+ * Compute a summary of the diff between HEAD and origin/base. Used to
+ * populate the 'Fichiers modifiés' section of the PR body without relying
+ * on the agent to recall what it changed.
+ */
+export async function diffAgainstBase(
+  ws: Workspace,
+  base: string,
+): Promise<DiffSummary | null> {
+  try {
+    const raw = await gitOutput(ws.path, [
+      "diff",
+      "--numstat",
+      `origin/${base}...HEAD`,
+    ]);
+    const byFile: DiffSummary["byFile"] = [];
+    let insertions = 0;
+    let deletions = 0;
+    for (const line of raw.split("\n")) {
+      const m = line.match(/^(\d+|-)\t(\d+|-)\t(.+)$/);
+      if (!m) continue;
+      const ins = m[1] === "-" ? 0 : Number(m[1]);
+      const del = m[2] === "-" ? 0 : Number(m[2]);
+      insertions += ins;
+      deletions += del;
+      byFile.push({ path: m[3], insertions: ins, deletions: del });
+    }
+    return { filesChanged: byFile.length, insertions, deletions, byFile };
+  } catch {
+    return null;
+  }
+}
+
 export async function commitAll(
   ws: Workspace,
   message: string,

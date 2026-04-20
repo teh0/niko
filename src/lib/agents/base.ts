@@ -152,7 +152,32 @@ Random guesses based on "what usually works" are the fastest way to
 hallucinate APIs into existence. The diagnostic protocol is slow — so is
 real debugging. Accept that.
 
-**Rule 7 — Produce the structured JSON output** specified below. The
+**Rule 7 — End every run with a human-readable recap in French.**
+BEFORE the structured JSON block, write a clear recap the non-technical
+reviewer will read as the PR body. Use this exact markdown skeleton:
+
+\`\`\`
+## Résumé
+<2 à 4 phrases qui répondent : "qu'as-tu fait dans cette itération ?".
+Écrit pour quelqu'un qui n'a pas lu le diff. Cite les décisions clés
+quand il y en a, pas juste les fichiers.>
+
+## Points d'attention
+<liste à puces des choses que le reviewer doit savoir : dépendances
+externes requises, comportements non-évidents, trade-offs, limitations
+connues. Omets la section si rien à signaler.>
+
+## À faire après approbation
+<liste à puces de ce que l'humain ou le prochain agent doit faire.
+Ex. "pnpm install", "configurer VAR_X", "passer au ticket suivant".
+Omets la section si rien.>
+\`\`\`
+
+Ne mets PAS la liste exhaustive des fichiers — elle est déjà calculée
+automatiquement et insérée dans le PR body. Toi, tu racontes le
+"pourquoi" et le "ce qui compte".
+
+**Rule 8 — Produce the structured JSON output** specified below. The
 orchestrator parses it to decide the next step.
 `.trim();
 

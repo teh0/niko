@@ -10,7 +10,13 @@ import { prisma } from "../db";
 import { env } from "../env";
 import { AGENTS } from "../agents";
 import { RateLimitError, StuckOnErrorError } from "../agents/runtime";
-import { ensureWorkspace, checkoutBranch, commitAll, pushBranch } from "../agents/workspace";
+import {
+  ensureWorkspace,
+  checkoutBranch,
+  commitAll,
+  pushBranch,
+  diffAgainstBase,
+} from "../agents/workspace";
 import { getCloneUrl, openPR } from "../github";
 import { enqueueNext } from "../orchestrator/flow";
 import { frenchTitle, frenchCommitSubject, buildPRBody } from "./persona";
@@ -139,8 +145,17 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
   if (committed) {
     await pushBranch(workspace, branch);
 
+    const diff = await diffAgainstBase(workspace, project.defaultBranch);
     const title = frenchTitle(role, task, input, ticketTitle);
-    const prBody = buildPRBody({ role, task, finalText, output, ticketTitle, iteration });
+    const prBody = buildPRBody({
+      role,
+      task,
+      finalText,
+      output,
+      ticketTitle,
+      iteration,
+      diff,
+    });
 
     // NOT draft. GitHub's merge API refuses draft PRs, and we auto-merge
     // on gate approval.
