@@ -1,240 +1,237 @@
 import { notFound } from "next/navigation";
-import { ExternalLink, CircleDashed, CheckCircle2, XCircle } from "lucide-react";
+import Link from "next/link";
+import {
+  Shield,
+  Kanban,
+  FileText,
+  Activity,
+  CheckCircle2,
+  CircleDashed,
+  XCircle,
+  ArrowRight,
+} from "lucide-react";
 import { prisma } from "@/lib/db";
-import { GateActions } from "./gate-actions";
-import { GateChat } from "./gate-chat";
-import { Kanban } from "./kanban";
-import { PmChat } from "./pm-chat";
-import { GATE_RESPONDER, supportsGateChat } from "@/lib/gate-chat/prompt";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const ROLE_LABEL: Record<string, string> = {
-  PM: "PM",
-  TECH_LEAD: "Tech Lead",
-  DB_EXPERT: "DB Expert",
-  DEV_WEB: "Dev Web",
-  DEV_MOBILE: "Dev Mobile",
-  DEV_BACKEND: "Dev Backend",
-  QA: "QA",
-  RED_TEAM_QA: "Red Team",
-  DEBUG: "Debug",
-};
-
-export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectOverviewPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
-      gates: { orderBy: { createdAt: "desc" } },
-      tickets: { orderBy: { priority: "asc" } },
-      agentRuns: { orderBy: { createdAt: "desc" }, take: 20 },
-      pullRequests: { orderBy: { number: "desc" } },
+      gates: { orderBy: { createdAt: "desc" }, take: 4 },
+      tickets: true,
+      agentRuns: { orderBy: { createdAt: "desc" }, take: 5 },
     },
   });
   if (!project) notFound();
 
+  const pendingGates = project.gates.filter((g) => g.status === "PENDING");
+  const ticketsByStatus = {
+    todo: project.tickets.filter((t) => t.status === "TODO").length,
+    inProgress: project.tickets.filter((t) => t.status === "IN_PROGRESS").length,
+    inReview: project.tickets.filter((t) => t.status === "IN_REVIEW").length,
+    done: project.tickets.filter((t) => t.status === "DONE").length,
+    blocked: project.tickets.filter((t) => t.status === "BLOCKED").length,
+  };
+
   return (
-    <div className="px-6 py-8 max-w-5xl mx-auto space-y-8">
+    <div className="px-8 py-8 max-w-4xl space-y-8">
       <header>
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
-            <a
-              href={`https://github.com/${project.githubOwner}/${project.githubRepo}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 text-sm text-muted-foreground font-mono inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
-            >
-              {project.githubOwner}/{project.githubRepo}
-              <ExternalLink className="size-3" />
-            </a>
-          </div>
-          <Badge variant="secondary" className="font-mono text-[10px]">
-            {project.status}
-          </Badge>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Overview of the studio&rsquo;s work on this project.
+        </p>
       </header>
 
-      <Section title="Brief">
-        <Card className="p-5">
-          <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-sans leading-relaxed">
-            {project.brief}
-          </pre>
-        </Card>
-      </Section>
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard
+          title="Pending gates"
+          value={pendingGates.length}
+          hint={pendingGates.length > 0 ? "Needs your review" : "You're all caught up"}
+          href={`/projects/${id}/gates`}
+          icon={Shield}
+          urgent={pendingGates.length > 0}
+        />
+        <StatCard
+          title="Tickets in flight"
+          value={ticketsByStatus.inProgress + ticketsByStatus.inReview}
+          hint={`${ticketsByStatus.todo} todo · ${ticketsByStatus.done} done`}
+          href={`/projects/${id}/backlog`}
+          icon={Kanban}
+        />
+      </div>
 
-      <Section
-        title="Validation gates"
-        hint="Review, discuss, and approve each step to advance the project."
-      >
-        {project.gates.length === 0 ? (
-          <EmptyState>No gates yet.</EmptyState>
+      {/* Pending gates snippet */}
+      {pendingGates.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold">Awaiting your review</h2>
+            <Link
+              href={`/projects/${id}/gates`}
+              className="text-xs text-primary inline-flex items-center gap-1 hover:underline"
+            >
+              See all <ArrowRight className="size-3" />
+            </Link>
+          </div>
+          <ul className="space-y-2">
+            {pendingGates.slice(0, 3).map((g) => (
+              <li
+                key={g.id}
+                className="flex items-center justify-between gap-4 py-2 border-t border-border first:border-t-0 first:pt-0"
+              >
+                <div className="min-w-0 flex items-center gap-2">
+                  <Badge variant="outline" className="font-mono text-[10px]">
+                    {g.kind}
+                  </Badge>
+                  <span className="text-sm truncate">{g.title}</span>
+                </div>
+                <CircleDashed className="size-4 text-amber-600" />
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* Recent runs */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold">Recent agent activity</h2>
+          <Link
+            href={`/projects/${id}/runs`}
+            className="text-xs text-primary inline-flex items-center gap-1 hover:underline"
+          >
+            See all <ArrowRight className="size-3" />
+          </Link>
+        </div>
+        {project.agentRuns.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No runs yet.</p>
         ) : (
-          <div className="space-y-2">
-            {project.gates.map((g) => {
-              const responder = GATE_RESPONDER[g.kind];
-              const agentLabel = responder ? ROLE_LABEL[responder] : "agent";
+          <ul className="space-y-2">
+            {project.agentRuns.map((r) => {
+              const Icon =
+                r.status === "SUCCEEDED"
+                  ? CheckCircle2
+                  : r.status === "FAILED"
+                    ? XCircle
+                    : Activity;
+              const color =
+                r.status === "SUCCEEDED"
+                  ? "text-emerald-600"
+                  : r.status === "FAILED"
+                    ? "text-red-600"
+                    : r.status === "RUNNING"
+                      ? "text-blue-600"
+                      : "text-muted-foreground";
               return (
-                <Card key={g.id} className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Badge variant="outline" className="font-mono text-[10px] h-5">
-                          {g.kind}
-                        </Badge>
-                        <span className="font-medium">{g.title}</span>
-                      </div>
-                      {g.prUrl && (
-                        <a
-                          href={g.prUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1.5 text-xs text-primary hover:underline inline-flex items-center gap-1"
-                        >
-                          PR #{g.prNumber}
-                          <ExternalLink className="size-3" />
-                        </a>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      {g.status === "PENDING" && <GateActions gateId={g.id} />}
-                      <GateBadge status={g.status} decision={g.decision} />
-                    </div>
+                <li
+                  key={r.id}
+                  className="flex items-center justify-between gap-3 py-1.5"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon className={cn("size-4 shrink-0", color)} />
+                    <Badge variant="outline" className="font-mono text-[10px] shrink-0">
+                      {r.role}
+                    </Badge>
+                    <span className="text-sm truncate">{r.task}</span>
                   </div>
-                  {g.status === "PENDING" && (
-                    <GateChat
-                      gateId={g.id}
-                      agentLabel={agentLabel}
-                      supportsChat={supportsGateChat(g.kind)}
-                    />
-                  )}
-                </Card>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </Section>
+      </Card>
 
-      <Section
-        title="Backlog"
-        hint="Tickets managed by the PM. Talk to the PM (bottom-right) to add more."
-      >
-        {project.tickets.length === 0 ? (
-          <EmptyState>
-            Not broken down yet. The Tech Lead will create the initial tickets
-            after the scaffold gate is approved, or you can talk to the PM to
-            add one now.
-          </EmptyState>
-        ) : (
-          <Kanban tickets={project.tickets} />
-        )}
-      </Section>
-
-      <PmChat projectId={project.id} />
-
-      <Section title="Recent agent runs">
-        {project.agentRuns.length === 0 ? (
-          <EmptyState>No runs yet.</EmptyState>
-        ) : (
-          <Card className="divide-y divide-border text-sm">
-            {project.agentRuns.map((r) => (
-              <div
-                key={r.id}
-                className="px-4 py-2.5 flex items-center justify-between gap-4"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Badge variant="outline" className="font-mono text-[10px] shrink-0">
-                    {r.role}
-                  </Badge>
-                  <span className="truncate">{r.task}</span>
-                </div>
-                <RunStatusBadge status={r.status} />
-              </div>
-            ))}
-          </Card>
-        )}
-      </Section>
+      <div className="grid grid-cols-2 gap-3">
+        <QuickLink
+          href={`/projects/${id}/brief`}
+          icon={FileText}
+          title="Brief"
+          subtitle="The project's specs & intake"
+        />
+        <QuickLink
+          href={`/projects/${id}/runs`}
+          icon={Activity}
+          title="Agent runs"
+          subtitle="Full activity log"
+        />
+      </div>
     </div>
   );
 }
 
-function Section({
+function StatCard({
   title,
+  value,
   hint,
-  children,
+  href,
+  icon: Icon,
+  urgent,
 }: {
   title: string;
-  hint?: string;
-  children: React.ReactNode;
+  value: number;
+  hint: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  urgent?: boolean;
 }) {
   return (
-    <section>
-      <div className="mb-3 flex items-baseline gap-3">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
-      </div>
-      {children}
-    </section>
+    <Link href={href} className="group">
+      <Card
+        className={cn(
+          "p-5 transition-all hover:shadow-sm",
+          urgent && "border-amber-200 bg-amber-50/40",
+        )}
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {title}
+            </div>
+            <div className="mt-2 text-3xl font-semibold tabular-nums">{value}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
+          </div>
+          <Icon
+            className={cn(
+              "size-5",
+              urgent ? "text-amber-600" : "text-muted-foreground",
+            )}
+          />
+        </div>
+      </Card>
+    </Link>
   );
 }
 
-function EmptyState({ children }: { children: React.ReactNode }) {
-  return (
-    <Card className="p-6 border-dashed text-center">
-      <p className="text-sm text-muted-foreground">{children}</p>
-    </Card>
-  );
-}
-
-function GateBadge({
-  status,
-  decision,
+function QuickLink({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
 }: {
-  status: string;
-  decision: string | null;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle: string;
 }) {
-  const isPending = status === "PENDING";
-  const isApproved = decision === "APPROVED";
-  const isNegative = decision === "REJECTED" || decision === "CHANGES_REQUESTED";
-
-  const Icon = isPending ? CircleDashed : isApproved ? CheckCircle2 : XCircle;
-  const label = isPending
-    ? "pending"
-    : (decision ?? "decided").toLowerCase().replace("_", " ");
-
   return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "gap-1 text-[10px] font-normal",
-        isPending && "text-amber-600 border-amber-200 bg-amber-50",
-        isApproved && "text-emerald-600 border-emerald-200 bg-emerald-50",
-        isNegative && "text-red-600 border-red-200 bg-red-50",
-      )}
-    >
-      <Icon className="size-3" />
-      {label}
-    </Badge>
-  );
-}
-
-function RunStatusBadge({ status }: { status: string }) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn(
-        "font-mono text-[10px]",
-        status === "SUCCEEDED" && "text-emerald-600 border-emerald-200 bg-emerald-50",
-        status === "FAILED" && "text-red-600 border-red-200 bg-red-50",
-        status === "RUNNING" && "text-blue-600 border-blue-200 bg-blue-50",
-        status === "QUEUED" && "text-muted-foreground",
-      )}
-    >
-      {status}
-    </Badge>
+    <Link href={href} className="group">
+      <Card className="p-4 transition-all hover:shadow-sm hover:border-foreground/20">
+        <div className="flex items-center gap-3">
+          <Icon className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <div>
+            <div className="text-sm font-medium">{title}</div>
+            <div className="text-xs text-muted-foreground">{subtitle}</div>
+          </div>
+        </div>
+      </Card>
+    </Link>
   );
 }
