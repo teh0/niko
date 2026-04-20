@@ -58,13 +58,12 @@ export class TechLeadAgent extends BaseAgent<
   ];
 
   protected maxTurns(): number {
-    // Scaffolding a monorepo with Next.js + Flutter + NestJS legitimately
-    // takes a lot of tool calls (per-app tsconfig, package.json,
-    // pubspec.yaml, nest-cli.json, CI yaml, memory vault seeds, bash to
-    // install deps, etc.). 40 turns was too tight — observed stalls at
-    // error_max_turns during scaffold. Plan/breakdown modes rarely use
-    // more than 20 so a higher cap is safe.
-    return 80;
+    // Scaffolding a monorepo (Next.js + Flutter + NestJS) needs many
+    // tool calls: per-app tsconfig / package.json / pubspec.yaml /
+    // nest-cli.json / CI yaml, memory vault seeds, bash installs, etc.
+    // Plan/breakdown modes rarely use >20 so a higher cap only really
+    // helps the scaffold path.
+    return 100;
   }
 
   readonly systemPrompt = `
