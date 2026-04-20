@@ -226,9 +226,9 @@ function AgentNode({ data }: NodeProps<Node<NodeData>>) {
   const snap = data.snap;
   const state = agentState(snap);
   const style = STATE_STYLE[state];
-  const clickable = Boolean(
-    snap?.activeRunId || (snap && snap.totalRuns > 0),
-  );
+  // Always clickable — even an idle agent opens its (possibly empty)
+  // runs page, so the UX is predictable.
+  const clickable = true;
 
   const content = (
     <div
@@ -285,10 +285,11 @@ function AgentNode({ data }: NodeProps<Node<NodeData>>) {
     </div>
   );
 
-  if (clickable && snap) {
-    const href = snap.activeRunId
-      ? `/projects/${data.projectId}/runs/${snap.activeRunId}`
-      : `/projects/${data.projectId}/runs?role=${data.role}`;
+  if (clickable) {
+    // Always link to the role-filtered runs page so clicks are predictable
+    // ('show me everything this agent has done'). The individual-run view
+    // stays accessible by clicking a row on the runs page.
+    const href = `/projects/${data.projectId}/runs?role=${data.role}`;
     return (
       <a href={href} className="block">
         {content}
