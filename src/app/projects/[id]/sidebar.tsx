@@ -15,6 +15,7 @@ import {
   GitBranch,
   Users,
   Cpu,
+  Settings,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,7 @@ export function ProjectSidebar({
     { href: `${base}/backlog`, label: "Backlog", icon: Kanban, count: counts.tickets },
     { href: `${base}/studio`, label: "Studio", icon: Users },
     { href: `${base}/runs`, label: "Agent runs", icon: Activity },
+    { href: `${base}/settings`, label: "Réglages", icon: Settings },
   ];
 
   return (

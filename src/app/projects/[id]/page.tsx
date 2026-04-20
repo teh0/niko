@@ -16,7 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AdvanceFlowButton } from "./advance-flow-button";
-import { DangerZone } from "./danger-zone";
 import { fmtRelative, fmtDuration } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -265,8 +264,6 @@ export default async function ProjectOverviewPage({
           subtitle="Full activity log"
         />
       </div>
-
-      <DangerZone projectId={id} projectName={project.name} />
     </div>
   );
 }
