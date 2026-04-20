@@ -56,8 +56,11 @@ COPY --from=build /app/src ./src
 COPY --from=build /app/tsconfig.json ./tsconfig.json
 
 # Non-root user for security; mount ~/.claude as a volume so `claude login`
-# credentials survive container restarts.
-RUN useradd -m -u 1001 niko && chown -R niko:niko /app
+# credentials survive container restarts. Pre-create the dir owned by niko
+# so a fresh named volume inherits the right ownership.
+RUN useradd -m -u 1001 niko \
+  && mkdir -p /home/niko/.claude \
+  && chown -R niko:niko /app /home/niko
 USER niko
 
 EXPOSE 3000

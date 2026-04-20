@@ -16,3 +16,10 @@ services:
       - "${NIKO_WEB_PORT:-3000}:3000"
     environment:
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:${NIKO_WEB_PORT:-3000}}
+
+# NOTE: we intentionally DO NOT bind-mount ~/.claude from the host into
+# the container. macOS stores the OAuth access token in the Keychain, not
+# in the filesystem — bind-mounting the dir alone leaves the container
+# seeing "Not logged in". Inside Linux, Claude Code stores credentials
+# file-based (claude-creds Docker volume), so a single `make login`
+# populates it and persists across restarts until `make clean`.
