@@ -14,6 +14,7 @@ import {
   Check,
   GitBranch,
   Users,
+  Cpu,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ export function ProjectSidebar({
   const items: NavItem[] = [
     { href: base, label: "Overview", icon: LayoutDashboard },
     { href: `${base}/brief`, label: "Brief", icon: FileText },
+    { href: `${base}/decisions`, label: "Décisions", icon: Cpu },
     {
       href: `${base}/gates`,
       label: "Gates",
