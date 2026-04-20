@@ -58,28 +58,27 @@ export function startAgentWorker() {
 async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
   const { runId, projectId, role, task, input, ticketId } = job.data;
 
-  const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
-  const cloneUrl = await getCloneUrl(
-    { owner: project.githubOwner, repo: project.githubRepo },
-    project.installationId,
-  );
-  const workspace = await ensureWorkspace(projectId, cloneUrl, project.defaultBranch);
+  // Mark the run RUNNING straight away so the UI doesn't show QUEUED if
+  // anything in the prep path (cloneUrl, workspace prep) throws below.
+  // BaseAgent.run() also sets RUNNING; idempotent.
+  await prisma.agentRun.update({
+    where: { id: runId },
+    data: { status: "RUNNING", startedAt: new Date() },
+  });
 
-  // Choose a branch name for this run.
-  const slug = task
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
-  const branch = `niko/${role.toLowerCase()}/${slug}-${runId.slice(-6)}`;
-  await checkoutBranch(workspace, branch, project.defaultBranch);
-
-  if (ticketId) {
-    await prisma.ticket.update({
-      where: { id: ticketId },
-      data: { status: "IN_PROGRESS", branch },
+  const prep = await prepareRun(job).catch(async (err) => {
+    await prisma.agentRun.update({
+      where: { id: runId },
+      data: {
+        status: "FAILED",
+        endedAt: new Date(),
+        error: err instanceof Error ? err.message : String(err),
+      },
     });
-  }
+    throw err;
+  });
+
+  const { project, workspace, branch, cloneUrl } = prep;
 
   const agent = AGENTS[role];
   const ctx = {
@@ -212,6 +211,40 @@ function gateKindFor(
 
 // For use by a transcript stream consumer (future).
 export type AgentTranscriptMsg = SDKMessage;
+
+/**
+ * Resolve everything the run needs before we hand off to the agent:
+ * the Project row, a tokenized clone URL, a synced workspace, and a
+ * feature branch for this run. Throws on any preparation failure — the
+ * caller translates the throw into a DB FAILED row.
+ */
+async function prepareRun(job: Job<AgentJobData>) {
+  const { runId, projectId, role, task, ticketId } = job.data;
+
+  const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
+  const cloneUrl = await getCloneUrl(
+    { owner: project.githubOwner, repo: project.githubRepo },
+    project.installationId,
+  );
+  const workspace = await ensureWorkspace(projectId, cloneUrl, project.defaultBranch);
+
+  const slug = task
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  const branch = `niko/${role.toLowerCase()}/${slug}-${runId.slice(-6)}`;
+  await checkoutBranch(workspace, branch, project.defaultBranch);
+
+  if (ticketId) {
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { status: "IN_PROGRESS", branch },
+    });
+  }
+
+  return { project, workspace, branch, cloneUrl };
+}
 
 /**
  * Called from the worker's "failed" handler when a run throws

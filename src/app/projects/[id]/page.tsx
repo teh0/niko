@@ -9,6 +9,7 @@ import {
   CircleDashed,
   XCircle,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +101,30 @@ export default async function ProjectOverviewPage({
         </Card>
       )}
 
+      {/* Live running agents — highlighted */}
+      {project.agentRuns.filter((r) => r.status === "RUNNING").length > 0 && (
+        <Card className="p-5 border-blue-200 bg-blue-50/40">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <Loader2 className="size-4 text-blue-600 animate-spin" />
+              Working right now
+            </h2>
+          </div>
+          <ul className="space-y-1.5">
+            {project.agentRuns
+              .filter((r) => r.status === "RUNNING")
+              .map((r) => (
+                <li key={r.id} className="flex items-center gap-2 text-sm">
+                  <Badge variant="outline" className="font-mono text-[10px] shrink-0">
+                    {r.role}
+                  </Badge>
+                  <span className="truncate">{r.task}</span>
+                </li>
+              ))}
+          </ul>
+        </Card>
+      )}
+
       {/* Recent runs */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
@@ -121,7 +146,9 @@ export default async function ProjectOverviewPage({
                   ? CheckCircle2
                   : r.status === "FAILED"
                     ? XCircle
-                    : Activity;
+                    : r.status === "RUNNING"
+                      ? Loader2
+                      : CircleDashed;
               const color =
                 r.status === "SUCCEEDED"
                   ? "text-emerald-600"
@@ -135,13 +162,27 @@ export default async function ProjectOverviewPage({
                   key={r.id}
                   className="flex items-center justify-between gap-3 py-1.5"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Icon className={cn("size-4 shrink-0", color)} />
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Icon
+                      className={cn(
+                        "size-4 shrink-0",
+                        color,
+                        r.status === "RUNNING" && "animate-spin",
+                      )}
+                    />
                     <Badge variant="outline" className="font-mono text-[10px] shrink-0">
                       {r.role}
                     </Badge>
                     <span className="text-sm truncate">{r.task}</span>
                   </div>
+                  <span
+                    className={cn(
+                      "font-mono text-[10px] uppercase tracking-wider shrink-0",
+                      color,
+                    )}
+                  >
+                    {r.status.toLowerCase()}
+                  </span>
                 </li>
               );
             })}
