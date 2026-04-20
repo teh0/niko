@@ -55,16 +55,12 @@ export function buildMcpServers(opts: { includePlaywright?: boolean } = {}): Opt
  * Agents declare which of these they want via `allowedTools`.
  */
 export const MCP_TOOL_NAMES = {
-  context7: [
-    "mcp__context7__resolve-library-id",
-    "mcp__context7__get-library-docs",
-  ],
-  figma: [
-    "mcp__figma__get_figma_data",
-    "mcp__figma__download_figma_images",
-  ],
-  // Playwright MCP is tool-heavy; we allow the server and let the CLI
-  // auto-discover its tools with a wildcard.
+  // Wildcard so we pick up all Context7 tools even as the server
+  // renames / adds them (observed: older 'get-library-docs' +
+  // 'resolve-library-id' now also 'query-docs'). Listing them one
+  // by one kept breaking when the server shipped a new tool name.
+  context7: ["mcp__context7__*"],
+  figma: ["mcp__figma__*"],
   playwright: ["mcp__playwright__*"],
 } as const;
 

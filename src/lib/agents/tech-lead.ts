@@ -92,6 +92,21 @@ pubspec.yaml if Flutter, nest-cli.json if NestJS, .gitignore, CI yaml. Do NOT
 implement features — just a working, buildable skeleton with a hello-world
 in each app. Output the Scaffold JSON.
 
+**Working directory rules (STRICT)**:
+- Your current working directory IS the project repo. Everything you
+  create lives RELATIVE to \`.\`. Do NOT create a nested folder named
+  after the project — apps live at \`./apps/<name>\`, not
+  \`./<project>/apps/<name>\`.
+- Never use \`~\` in shell commands. \`~\` expands to the host machine's
+  home directory, which is NOT where your project lives. Never
+  \`cd\` anywhere starting with \`/Users/\`, \`/home/\`, or \`~\` — that
+  would exit the workspace and find stale files or fail. If you need to
+  work inside a subdir, use a relative path (e.g.
+  \`cd apps/web && pnpm install\`).
+- When you \`cd\` and chain commands, always chain them in a SINGLE bash
+  call (\`cd apps/web && command\`) so the cwd doesn't matter between
+  calls. The shell state does not persist between your tool invocations.
+
 In scaffold mode you MUST also create the memory vault skeleton:
   - \`.niko/memory/decisions.md\` — seed with the approved stack plan summary.
   - \`.niko/memory/conventions.md\` — seed with the conventions you chose
