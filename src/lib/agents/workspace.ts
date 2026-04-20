@@ -47,14 +47,56 @@ export async function ensureWorkspace(
   if (!exists) {
     await mkdir(env.WORKSPACE_DIR, { recursive: true });
     await git(env.WORKSPACE_DIR, ["clone", cloneUrl, projectId]);
-  } else {
-    await git(path, ["fetch", "origin"]);
-    await git(path, ["checkout", defaultBranch]);
-    await git(path, ["reset", "--hard", `origin/${defaultBranch}`]);
-    await git(path, ["clean", "-fdx"]);
   }
 
+  await bootstrapIfEmpty(path, defaultBranch);
+
+  // Sync to origin's default branch. If the repo has a remote for
+  // defaultBranch we hard-reset onto it; otherwise we just checkout
+  // the local branch we just created.
+  const hasRemote = await hasRemoteBranch(path, defaultBranch);
+  await git(path, ["fetch", "origin"]);
+  await git(path, ["checkout", defaultBranch]);
+  if (hasRemote) {
+    await git(path, ["reset", "--hard", `origin/${defaultBranch}`]);
+  }
+  await git(path, ["clean", "-fdx"]);
+
   return { projectId, path };
+}
+
+/**
+ * Brand-new GitHub repos have no commits and no branches. Any `git checkout
+ * main` will fail ("pathspec 'main' did not match"). We detect that state
+ * and create an initial empty commit on the default branch so subsequent
+ * agent operations can build on something.
+ */
+async function bootstrapIfEmpty(path: string, defaultBranch: string): Promise<void> {
+  const headExists = await gitOutput(path, ["rev-parse", "--verify", "HEAD"]).then(
+    () => true,
+    () => false,
+  );
+  if (headExists) return;
+
+  await git(path, ["checkout", "-b", defaultBranch]);
+  // Initial .gitkeep so the commit has content; agents overwrite as they go.
+  await run("sh", ["-c", "echo '# niko workspace' > README.md"], path);
+  await git(path, ["add", "-A"]);
+  await git(path, [
+    "-c", "user.name=Niko Studio",
+    "-c", "user.email=bot@niko.studio",
+    "commit", "-m", "Initial commit from Niko",
+  ]);
+  await git(path, ["push", "-u", "origin", defaultBranch]);
+}
+
+async function hasRemoteBranch(path: string, branch: string): Promise<boolean> {
+  try {
+    const out = await gitOutput(path, ["ls-remote", "--heads", "origin", branch]);
+    return out.trim().length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export async function destroyWorkspace(projectId: string): Promise<void> {

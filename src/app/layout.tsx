@@ -1,8 +1,15 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Lexend } from "next/font/google";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const lexend = Lexend({
+  subsets: ["latin"],
+  variable: "--font-lexend",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Niko Studio",
@@ -11,8 +18,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body>
+    <html lang="en" className={`dark ${lexend.variable}`}>
+      <body className="font-sans">
         <div className="min-h-screen flex flex-col">
           <header className="border-b border-border px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-6">
