@@ -13,6 +13,7 @@ import {
   ChevronsUpDown,
   Check,
   GitBranch,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ export function ProjectSidebar({
       badge: counts.pendingGates > 0 ? "dot" : undefined,
     },
     { href: `${base}/backlog`, label: "Backlog", icon: Kanban, count: counts.tickets },
+    { href: `${base}/studio`, label: "Studio", icon: Users },
     { href: `${base}/runs`, label: "Agent runs", icon: Activity },
   ];
 
