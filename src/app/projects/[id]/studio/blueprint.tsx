@@ -125,6 +125,9 @@ export function StudioBlueprint({ projectId, agents }: BlueprintProps) {
         elementsSelectable={false}
         panOnDrag
         zoomOnScroll
+        onNodeClick={(_e, node) => {
+          router.push(`/projects/${projectId}/runs?role=${node.id}`);
+        }}
       >
         <Background gap={20} size={1.2} color="hsl(220 13% 93%)" />
         <Controls showInteractive={false} />
@@ -226,16 +229,12 @@ function AgentNode({ data }: NodeProps<Node<NodeData>>) {
   const snap = data.snap;
   const state = agentState(snap);
   const style = STATE_STYLE[state];
-  // Always clickable — even an idle agent opens its (possibly empty)
-  // runs page, so the UX is predictable.
-  const clickable = true;
 
-  const content = (
+  return (
     <div
       className={cn(
-        "relative rounded-xl px-3.5 py-2.5 min-w-[190px] transition-all",
+        "relative rounded-xl px-3.5 py-2.5 min-w-[190px] transition-all cursor-pointer hover:border-foreground/40",
         style.box,
-        clickable && "cursor-pointer hover:border-foreground/40",
       )}
     >
       {style.glyph}
@@ -284,17 +283,4 @@ function AgentNode({ data }: NodeProps<Node<NodeData>>) {
       />
     </div>
   );
-
-  if (clickable) {
-    // Always link to the role-filtered runs page so clicks are predictable
-    // ('show me everything this agent has done'). The individual-run view
-    // stays accessible by clicking a row on the runs page.
-    const href = `/projects/${data.projectId}/runs?role=${data.role}`;
-    return (
-      <a href={href} className="block">
-        {content}
-      </a>
-    );
-  }
-  return content;
 }
