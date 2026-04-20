@@ -13,6 +13,7 @@ import { RateLimitError, StuckOnErrorError } from "../agents/runtime";
 import { ensureWorkspace, checkoutBranch, commitAll, pushBranch } from "../agents/workspace";
 import { getCloneUrl, openPR } from "../github";
 import { enqueueNext } from "../orchestrator/flow";
+import { frenchTitle, frenchCommitSubject, buildPRBody } from "./persona";
 
 export function startAgentWorker() {
   const worker = new Worker<AgentJobData>(
@@ -104,10 +105,32 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
     await persistTicketBreakdown(projectId, output);
   }
 
+  // Resolve the ticket's title if this run is implementing a ticket —
+  // used to craft a human PR title like '🌐 Login form' instead of
+  // '[DEV_WEB] Implement ticket: Login form'.
+  const ticket = ticketId
+    ? await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { title: true },
+      })
+    : null;
+  const ticketTitle = ticket?.title;
+
+  // Count past gates of the same kind to surface an iteration number on
+  // revisions. Humans get 'itération 2' etc. in the PR body.
+  const gateKindForThisRun = gateKindFor(role, input);
+  const iteration = gateKindForThisRun
+    ? (await prisma.gate.count({
+        where: { projectId, kind: gateKindForThisRun },
+      })) + 1
+    : 1;
+
   // Commit + push whatever the agent changed.
+  const commitSubject = frenchCommitSubject(role, task, input, ticketTitle);
+  const commitBody = (finalText || "").slice(0, 500);
   const committed = await commitAll(
     workspace,
-    `[${role}] ${task}\n\n${(finalText || "").slice(0, 500)}`,
+    `${commitSubject}\n\n${commitBody}`,
   );
 
   let prNumber: number | undefined;
@@ -116,16 +139,17 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
   if (committed) {
     await pushBranch(workspace, branch);
 
-    const prBody = buildPRBody({ role, task, finalText, output });
+    const title = frenchTitle(role, task, input, ticketTitle);
+    const prBody = buildPRBody({ role, task, finalText, output, ticketTitle, iteration });
+
     // NOT draft. GitHub's merge API refuses draft PRs, and we auto-merge
-    // on gate approval. Feature-ticket PRs stay non-draft too; if a dev
-    // wants to mark something WIP they can do it on GitHub directly.
+    // on gate approval.
     const pr = await openPR({
       ref: { owner: project.githubOwner, repo: project.githubRepo },
       installationId: project.installationId,
       head: branch,
       base: project.defaultBranch,
-      title: prTitle(role, task),
+      title,
       body: prBody,
       draft: false,
     });
@@ -136,7 +160,7 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
       data: {
         projectId,
         number: pr.number,
-        title: prTitle(role, task),
+        title,
         branch,
         state: "open",
         url: pr.url,
@@ -153,13 +177,12 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
   }
 
   // Create the matching gate (if this run opens one).
-  const gateKind = gateKindFor(role, input);
-  if (gateKind && prNumber) {
+  if (gateKindForThisRun && prNumber) {
     await prisma.gate.create({
       data: {
         projectId,
-        kind: gateKind,
-        title: prTitle(role, task),
+        kind: gateKindForThisRun,
+        title: frenchTitle(role, task, input, ticketTitle),
         description: output ? JSON.stringify(output, null, 2) : finalText.slice(0, 2000),
         prNumber,
         prUrl,
@@ -172,33 +195,6 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
   await enqueueNext({ id: projectId });
 }
 
-function prTitle(role: string, task: string): string {
-  return `[${role}] ${task.slice(0, 72)}`;
-}
-
-function buildPRBody(args: {
-  role: string;
-  task: string;
-  finalText: string;
-  output: unknown;
-}): string {
-  const outBlock = args.output
-    ? `\n\n<details><summary>Structured output</summary>\n\n\`\`\`json\n${JSON.stringify(args.output, null, 2)}\n\`\`\`\n</details>`
-    : "";
-  return [
-    `> Auto-opened by **Niko Studio** — agent: \`${args.role}\``,
-    ``,
-    `**Task**`,
-    args.task,
-    ``,
-    `**Agent summary**`,
-    args.finalText.slice(0, 4000),
-    outBlock,
-    ``,
-    `---`,
-    `_Review and approve on GitHub to advance the project._`,
-  ].join("\n");
-}
 
 function gateKindFor(
   role: string,
