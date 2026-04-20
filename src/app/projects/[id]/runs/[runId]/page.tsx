@@ -17,6 +17,7 @@ import { Markdown } from "@/components/markdown";
 import { cn } from "@/lib/utils";
 import { AutoRefresh } from "../auto-refresh";
 import { ToolResult } from "./tool-result";
+import { fmtNumber, fmtDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -61,11 +62,11 @@ export default async function RunDetailPage({
         </div>
         <h1 className="text-xl font-semibold tracking-tight">{run.task}</h1>
         <div className="text-[11px] text-muted-foreground flex flex-wrap gap-2 items-center">
-          <span>Created {new Date(run.createdAt).toLocaleString()}</span>
+          <span>Créé le {fmtDateTime(run.createdAt)}</span>
           {duration && <span>· {duration}</span>}
           {run.tokensIn != null && run.tokensOut != null && (
             <span>
-              · {run.tokensIn.toLocaleString()} / {run.tokensOut.toLocaleString()} tokens
+              · {fmtNumber(run.tokensIn)} / {fmtNumber(run.tokensOut)} tokens
             </span>
           )}
         </div>

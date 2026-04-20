@@ -31,6 +31,11 @@ model Project {
   // null until the Tech Lead gate is approved.
   stackPlan     Json?
 
+  // When set, the orchestrator refuses to enqueue new work for this
+  // project. Active runs finish naturally; nothing new gets picked up
+  // until the user clicks 'Resume'.
+  pausedAt      DateTime?
+
   status        ProjectStatus @default(INTAKE)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

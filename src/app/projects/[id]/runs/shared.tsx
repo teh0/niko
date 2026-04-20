@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { RunErrorDetail } from "./run-error";
+import { fmtNumber } from "@/lib/format";
 
 export type RunLite = {
   id: string;
@@ -91,7 +92,7 @@ export function RunRow({
             {duration && <span>· {duration}</span>}
             {run.tokensIn != null && run.tokensOut != null && (
               <span>
-                · {(run.tokensIn + run.tokensOut).toLocaleString()} tokens
+                · {fmtNumber(run.tokensIn + run.tokensOut)} tokens
               </span>
             )}
           </div>

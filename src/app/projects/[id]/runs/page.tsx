@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { AutoRefresh } from "./auto-refresh";
 import { RoleFilter, RunGroup } from "./client";
 import { RunRow, formatDuration, type GroupedRuns } from "./shared";
+import { fmtNumber } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -178,7 +179,7 @@ function StatTile({
         {label}
       </div>
       <div className={cn("text-2xl font-semibold tabular-nums mt-1", toneCls)}>
-        {value.toLocaleString()}
+        {fmtNumber(value)}
       </div>
       {secondary && (
         <div className="text-[11px] text-muted-foreground mt-0.5">{secondary}</div>

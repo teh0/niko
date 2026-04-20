@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fmtNumber } from "@/lib/format";
 
 const PREVIEW_CHARS = 400;
 
@@ -35,7 +36,7 @@ export function ToolResult({
             className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground ml-auto"
           >
             {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
-            {open ? "collapse" : "expand"} ({content.length.toLocaleString()} chars)
+            {open ? "collapse" : "expand"} ({fmtNumber(content.length)} chars)
           </button>
         )}
       </div>
