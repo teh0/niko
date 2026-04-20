@@ -14,8 +14,8 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   const { id } = await ctx.params;
   const prev = await prisma.agentRun.findUnique({ where: { id } });
   if (!prev) return new Response("not found", { status: 404 });
-  if (prev.status !== "FAILED") {
-    return new Response("only failed runs can be retried", { status: 409 });
+  if (prev.status === "RUNNING" || prev.status === "QUEUED") {
+    return new Response("run is still in flight", { status: 409 });
   }
   if (prev.role === "INTAKE") {
     return new Response("intake runs are not queued", { status: 400 });

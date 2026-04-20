@@ -257,6 +257,10 @@ export abstract class BaseAgent<TOutput = unknown> {
           status: "SUCCEEDED",
           endedAt: new Date(),
           output: output as never,
+          // Clear any stale error left over from a prior failed run of
+          // the same row (shouldn't happen normally but BullMQ retries
+          // can update in-place).
+          error: null,
           tokensIn: result.tokensIn,
           tokensOut: result.tokensOut,
         },

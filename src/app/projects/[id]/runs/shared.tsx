@@ -100,7 +100,7 @@ export function RunRow({
           <RunErrorDetail
             error={run.error}
             runId={run.id}
-            retryable={run.status === "FAILED"}
+            retryable={run.status !== "RUNNING" && run.status !== "QUEUED"}
           />
         )}
       </div>
