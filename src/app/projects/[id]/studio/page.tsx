@@ -8,6 +8,8 @@ import {
   Brain,
   LineChart,
   ArrowRight,
+  LayoutGrid,
+  Network,
 } from "lucide-react";
 import type { AgentRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -15,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AutoRefresh } from "../runs/auto-refresh";
+import { StudioBlueprint } from "./blueprint";
 
 export const dynamic = "force-dynamic";
 
@@ -111,8 +114,15 @@ const ROLE_META: Record<AgentRole, { label: string; description: string; emoji: 
   },
 };
 
-export default async function StudioPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function StudioPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: "graph" | "cards" }>;
+}) {
   const { id } = await params;
+  const { view = "cards" } = await searchParams;
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
@@ -152,6 +162,24 @@ export default async function StudioPage({ params }: { params: Promise<{ id: str
   const anyActive = Array.from(snapshot.values()).some((s) => s.active);
   const activeCount = Array.from(snapshot.values()).filter((s) => s.active).length;
 
+  // Build the flat agent list for the blueprint view.
+  const blueprintAgents = Array.from(snapshot.entries())
+    .filter(([role]) => role !== "INTAKE")
+    .map(([role, s]) => {
+      const ticket = s.active?.ticketId
+        ? project.tickets.find((t) => t.id === s.active?.ticketId)
+        : undefined;
+      return {
+        role,
+        activeStatus: s.active?.status as "RUNNING" | "QUEUED" | undefined,
+        activeRunId: s.active?.id,
+        activeTask: s.active?.task,
+        activeTicketTitle: ticket?.title,
+        lastStatus: s.lastFinished?.status,
+        totalRuns: s.totalRuns,
+      };
+    });
+
   return (
     <div className="px-8 py-8">
       {anyActive && <AutoRefresh intervalMs={3000} />}
@@ -164,8 +192,7 @@ export default async function StudioPage({ params }: { params: Promise<{ id: str
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Live view of who&rsquo;s working on this project.
-            {anyActive &&
-              " Auto-refreshes every 3s."}
+            {anyActive && " Auto-refreshes every 3s."}
           </p>
         </div>
         <div className="shrink-0 text-right">
@@ -176,6 +203,37 @@ export default async function StudioPage({ params }: { params: Promise<{ id: str
         </div>
       </header>
 
+      {/* View toggle */}
+      <div className="mb-6 inline-flex items-center gap-0 border border-border rounded-lg p-0.5 bg-muted/30">
+        <Link
+          href={`/projects/${id}/studio`}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+            view === "cards"
+              ? "bg-background shadow-sm text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <LayoutGrid className="size-3.5" />
+          Cartes
+        </Link>
+        <Link
+          href={`/projects/${id}/studio?view=graph`}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+            view === "graph"
+              ? "bg-background shadow-sm text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Network className="size-3.5" />
+          Graph
+        </Link>
+      </div>
+
+      {view === "graph" ? (
+        <StudioBlueprint projectId={id} agents={blueprintAgents} />
+      ) : (
       <div className="space-y-8">
         {POLES.map((pole) => (
           <section key={pole.key}>
@@ -207,6 +265,7 @@ export default async function StudioPage({ params }: { params: Promise<{ id: str
           </section>
         ))}
       </div>
+      )}
     </div>
   );
 }

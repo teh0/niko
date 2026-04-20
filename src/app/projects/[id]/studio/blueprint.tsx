@@ -1,0 +1,242 @@
+"use client";
+
+import { useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  Handle,
+  Position,
+  type Node,
+  type Edge,
+  type NodeProps,
+  MarkerType,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import type { AgentRole } from "@prisma/client";
+import { cn } from "@/lib/utils";
+
+type AgentSnap = {
+  role: AgentRole;
+  activeStatus?: "RUNNING" | "QUEUED";
+  activeRunId?: string;
+  activeTask?: string;
+  activeTicketTitle?: string;
+  lastStatus?: string;
+  totalRuns: number;
+};
+
+export type BlueprintProps = {
+  projectId: string;
+  agents: AgentSnap[];
+};
+
+/**
+ * Live org-chart / flow view of the studio. Each agent is a node; edges
+ * model the typical collaboration flow (PM feeds Tech Lead, Tech Lead
+ * feeds devs, devs feed QA → Red Team, any agent can fall back to Debug).
+ *
+ * Active nodes pulse blue. Edges leading INTO an active node get animated
+ * dashes so you can visually follow 'who the work just came from'.
+ */
+export function StudioBlueprint({ projectId, agents }: BlueprintProps) {
+  const router = useRouter();
+
+  // Auto-refresh the server component every 2.5s when anything is running
+  // so the graph updates live.
+  const anyActive = agents.some((a) => a.activeStatus === "RUNNING");
+  useEffect(() => {
+    if (!anyActive) return;
+    const id = setInterval(() => router.refresh(), 2500);
+    return () => clearInterval(id);
+  }, [anyActive, router]);
+
+  const byRole = useMemo(() => {
+    const m = new Map<AgentRole, AgentSnap>();
+    for (const a of agents) m.set(a.role, a);
+    return m;
+  }, [agents]);
+
+  const isActive = (r: AgentRole) => byRole.get(r)?.activeStatus === "RUNNING";
+
+  // Fixed layout — clear top-to-bottom flow of value through the studio.
+  const nodes: Node<NodeData>[] = useMemo(
+    () => [
+      node("PM", "Product Manager", "📋", 360, 20, byRole.get("PM"), projectId),
+      node("TECH_LEAD", "Tech Lead", "🏗️", 360, 160, byRole.get("TECH_LEAD"), projectId),
+      node("DB_EXPERT", "DB Expert", "🗄️", 80, 160, byRole.get("DB_EXPERT"), projectId),
+      node("DEV_WEB", "Dev Web", "🌐", 40, 320, byRole.get("DEV_WEB"), projectId),
+      node("DEV_MOBILE", "Dev Mobile", "📱", 290, 320, byRole.get("DEV_MOBILE"), projectId),
+      node("DEV_BACKEND", "Dev Backend", "⚙️", 540, 320, byRole.get("DEV_BACKEND"), projectId),
+      node("QA", "QA", "🔍", 360, 480, byRole.get("QA"), projectId),
+      node("RED_TEAM_QA", "Red Team", "🥷", 640, 480, byRole.get("RED_TEAM_QA"), projectId),
+      node("DEBUG", "Debug", "🔎", 80, 480, byRole.get("DEBUG"), projectId),
+    ],
+    [byRole, projectId],
+  );
+
+  const edges: Edge[] = useMemo(() => {
+    const edgeDefs: Array<[AgentRole, AgentRole]> = [
+      ["PM", "TECH_LEAD"],
+      ["TECH_LEAD", "DB_EXPERT"],
+      ["TECH_LEAD", "DEV_WEB"],
+      ["TECH_LEAD", "DEV_MOBILE"],
+      ["TECH_LEAD", "DEV_BACKEND"],
+      ["DB_EXPERT", "DEV_BACKEND"],
+      ["DEV_WEB", "QA"],
+      ["DEV_MOBILE", "QA"],
+      ["DEV_BACKEND", "QA"],
+      ["QA", "RED_TEAM_QA"],
+      ["DEV_WEB", "DEBUG"],
+      ["DEV_BACKEND", "DEBUG"],
+    ];
+    return edgeDefs.map(([src, dst]) => {
+      const active = isActive(dst); // the edge INTO an active agent lights up
+      return {
+        id: `${src}->${dst}`,
+        source: src,
+        target: dst,
+        animated: active,
+        style: {
+          stroke: active ? "hsl(234 89% 60%)" : "hsl(220 13% 88%)",
+          strokeWidth: active ? 2 : 1.5,
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: active ? "hsl(234 89% 60%)" : "hsl(220 13% 70%)",
+        },
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byRole]);
+
+  return (
+    <div className="w-full h-[640px] border border-border rounded-lg overflow-hidden bg-background">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={NODE_TYPES}
+        fitView
+        fitViewOptions={{ padding: 0.15 }}
+        proOptions={{ hideAttribution: true }}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={false}
+        panOnDrag
+        zoomOnScroll
+      >
+        <Background gap={20} size={1.2} color="hsl(220 13% 93%)" />
+        <Controls showInteractive={false} />
+      </ReactFlow>
+    </div>
+  );
+}
+
+type NodeData = {
+  role: AgentRole;
+  label: string;
+  emoji: string;
+  snap?: AgentSnap;
+  projectId: string;
+};
+
+function node(
+  role: AgentRole,
+  label: string,
+  emoji: string,
+  x: number,
+  y: number,
+  snap: AgentSnap | undefined,
+  projectId: string,
+): Node<NodeData> {
+  return {
+    id: role,
+    type: "agent",
+    position: { x, y },
+    data: { role, label, emoji, snap, projectId },
+  };
+}
+
+const NODE_TYPES = { agent: AgentNode };
+
+function AgentNode({ data }: NodeProps<Node<NodeData>>) {
+  const snap = data.snap;
+  const isWorking = snap?.activeStatus === "RUNNING";
+  const isQueued = snap?.activeStatus === "QUEUED";
+  const hasHistory = (snap?.totalRuns ?? 0) > 0;
+
+  const clickable = Boolean(snap?.activeRunId || (hasHistory && snap?.lastStatus));
+
+  const content = (
+    <div
+      className={cn(
+        "relative rounded-xl border bg-white shadow-sm px-3.5 py-2.5 min-w-[180px] transition-all",
+        isWorking && "border-blue-400 shadow-lg shadow-blue-200/50 ring-2 ring-blue-100",
+        isQueued && "border-amber-300 ring-2 ring-amber-50",
+        !isWorking && !isQueued && "border-border",
+        clickable && "cursor-pointer hover:border-foreground/30",
+      )}
+    >
+      {/* pulsing dot for live activity */}
+      {isWorking && (
+        <span className="absolute -top-1 -right-1 flex size-3">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 animate-ping" />
+          <span className="relative inline-flex size-3 rounded-full bg-blue-500" />
+        </span>
+      )}
+
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+
+      <div className="flex items-center gap-2">
+        <div className="size-8 rounded-md bg-muted flex items-center justify-center text-base shrink-0">
+          {data.emoji}
+        </div>
+        <div className="min-w-0">
+          <div className="text-[13px] font-semibold truncate">{data.label}</div>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            {isWorking
+              ? "works now"
+              : isQueued
+                ? "queued"
+                : hasHistory
+                  ? snap?.lastStatus === "FAILED"
+                    ? "last: failed"
+                    : "idle"
+                  : "not yet"}
+          </div>
+        </div>
+      </div>
+
+      {isWorking && snap?.activeTask && (
+        <div className="mt-2 pt-2 border-t border-border">
+          <div className="text-[11px] text-foreground/80 line-clamp-2 leading-snug">
+            {snap.activeTicketTitle ?? snap.activeTask}
+          </div>
+        </div>
+      )}
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ opacity: 0, pointerEvents: "none" }}
+      />
+    </div>
+  );
+
+  if (clickable && snap) {
+    const href = snap.activeRunId
+      ? `/projects/${data.projectId}/runs/${snap.activeRunId}`
+      : `/projects/${data.projectId}/runs?role=${data.role}`;
+    return (
+      <a href={href} className="block">
+        {content}
+      </a>
+    );
+  }
+  return content;
+}
