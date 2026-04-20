@@ -10,6 +10,9 @@ import {
   ArrowRight,
   LayoutGrid,
   Network,
+  GitBranch,
+  Workflow,
+  Building,
 } from "lucide-react";
 import type { AgentRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -18,6 +21,9 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AutoRefresh } from "../runs/auto-refresh";
 import { StudioBlueprint } from "./blueprint";
+import { OrgChart } from "./org-chart";
+import { FlowDiagram } from "./flow-diagram";
+import { FloorPlan } from "./floor-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +125,9 @@ export default async function StudioPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ view?: "graph" | "cards" }>;
+  searchParams: Promise<{
+    view?: "cards" | "graph" | "org" | "flow" | "floor";
+  }>;
 }) {
   const { id } = await params;
   const { view = "cards" } = await searchParams;
@@ -204,35 +212,22 @@ export default async function StudioPage({
       </header>
 
       {/* View toggle */}
-      <div className="mb-6 inline-flex items-center gap-0 border border-border rounded-lg p-0.5 bg-muted/30">
-        <Link
-          href={`/projects/${id}/studio`}
-          className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-            view === "cards"
-              ? "bg-background shadow-sm text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <LayoutGrid className="size-3.5" />
-          Cartes
-        </Link>
-        <Link
-          href={`/projects/${id}/studio?view=graph`}
-          className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
-            view === "graph"
-              ? "bg-background shadow-sm text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Network className="size-3.5" />
-          Graph
-        </Link>
+      <div className="mb-6 inline-flex items-center gap-0 border border-border rounded-lg p-0.5 bg-muted/30 flex-wrap">
+        <ViewTab id={id} view={view} target="cards" icon={LayoutGrid} label="Cartes" />
+        <ViewTab id={id} view={view} target="graph" icon={Network} label="Graph" />
+        <ViewTab id={id} view={view} target="org" icon={GitBranch} label="Organigramme" />
+        <ViewTab id={id} view={view} target="flow" icon={Workflow} label="Flux" />
+        <ViewTab id={id} view={view} target="floor" icon={Building} label="Atelier" />
       </div>
 
       {view === "graph" ? (
         <StudioBlueprint projectId={id} agents={blueprintAgents} />
+      ) : view === "org" ? (
+        <OrgChart projectId={id} agents={blueprintAgents} />
+      ) : view === "flow" ? (
+        <FlowDiagram projectId={id} agents={blueprintAgents} />
+      ) : view === "floor" ? (
+        <FloorPlan projectId={id} agents={blueprintAgents} />
       ) : (
       <div className="space-y-8">
         {POLES.map((pole) => (
@@ -267,6 +262,40 @@ export default async function StudioPage({
       </div>
       )}
     </div>
+  );
+}
+
+function ViewTab({
+  id,
+  view,
+  target,
+  icon: Icon,
+  label,
+}: {
+  id: string;
+  view: string;
+  target: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}) {
+  const active = view === target;
+  const href =
+    target === "cards"
+      ? `/projects/${id}/studio`
+      : `/projects/${id}/studio?view=${target}`;
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+        active
+          ? "bg-background shadow-sm text-foreground"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Icon className="size-3.5" />
+      {label}
+    </Link>
   );
 }
 
