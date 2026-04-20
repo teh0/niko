@@ -117,6 +117,9 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
     await pushBranch(workspace, branch);
 
     const prBody = buildPRBody({ role, task, finalText, output });
+    // NOT draft. GitHub's merge API refuses draft PRs, and we auto-merge
+    // on gate approval. Feature-ticket PRs stay non-draft too; if a dev
+    // wants to mark something WIP they can do it on GitHub directly.
     const pr = await openPR({
       ref: { owner: project.githubOwner, repo: project.githubRepo },
       installationId: project.installationId,
@@ -124,7 +127,7 @@ async function runAgentJob(job: Job<AgentJobData>): Promise<void> {
       base: project.defaultBranch,
       title: prTitle(role, task),
       body: prBody,
-      draft: role !== "QA",
+      draft: false,
     });
     prNumber = pr.number;
     prUrl = pr.url;

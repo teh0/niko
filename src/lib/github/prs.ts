@@ -74,3 +74,43 @@ export async function getPR(
   });
   return data;
 }
+
+/**
+ * Merge a PR. Squash-merge by default: keeps main tidy with one commit per
+ * gate, preserving the PR title/body as the commit message.
+ * No-op (returns false) if the PR is already merged or closed.
+ */
+export async function mergePR(
+  ref: RepoRef,
+  installationId: bigint | null | undefined,
+  number: number,
+  opts: { method?: "squash" | "merge" | "rebase"; title?: string; body?: string } = {},
+): Promise<boolean> {
+  const gh = await getOctokit(installationId);
+  const { data: pr } = await gh.pulls.get({
+    owner: ref.owner,
+    repo: ref.repo,
+    pull_number: number,
+  });
+  if (pr.merged) return false;
+  if (pr.state === "closed") return false;
+
+  // Draft PRs can't be merged — mark ready first. Old runs (before we
+  // switched defaults) may still be in draft.
+  if (pr.draft) {
+    await gh.graphql(
+      `mutation($id: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $id }) { clientMutationId } }`,
+      { id: pr.node_id },
+    );
+  }
+
+  await gh.pulls.merge({
+    owner: ref.owner,
+    repo: ref.repo,
+    pull_number: number,
+    merge_method: opts.method ?? "squash",
+    commit_title: opts.title ?? pr.title,
+    commit_message: opts.body ?? "",
+  });
+  return true;
+}
