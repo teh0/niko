@@ -39,8 +39,34 @@ model Project {
   tickets       Ticket[]
   agentRuns     AgentRun[]
   pullRequests  PullRequest[]
+  pmMessages    ProjectMessage[]
 
   @@unique([githubOwner, githubRepo])
+}
+
+/// Ongoing conversation with the PM agent about this project — add
+/// features, ask questions, get help crafting tickets mid-flight.
+model ProjectMessage {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  role      ProjectMsgRole
+  content   String     @db.Text
+
+  // If the PM's message caused tickets to be created, we list their ids
+  // so the UI can show an inline "N tickets created" affordance.
+  createdTicketIds String[] @default([])
+
+  createdAt DateTime   @default(now())
+
+  @@index([projectId, createdAt])
+}
+
+enum ProjectMsgRole {
+  USER
+  AGENT
+  SYSTEM
 }
 
 enum ProjectStatus {

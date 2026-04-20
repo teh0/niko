@@ -3,6 +3,8 @@ import { ExternalLink, CircleDashed, CheckCircle2, XCircle } from "lucide-react"
 import { prisma } from "@/lib/db";
 import { GateActions } from "./gate-actions";
 import { GateChat } from "./gate-chat";
+import { Kanban } from "./kanban";
+import { PmChat } from "./pm-chat";
 import { GATE_RESPONDER, supportsGateChat } from "@/lib/gate-chat/prompt";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -117,27 +119,22 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         )}
       </Section>
 
-      <Section title="Tickets">
+      <Section
+        title="Backlog"
+        hint="Tickets managed by the PM. Talk to the PM (bottom-right) to add more."
+      >
         {project.tickets.length === 0 ? (
-          <EmptyState>Not broken down yet.</EmptyState>
+          <EmptyState>
+            Not broken down yet. The Tech Lead will create the initial tickets
+            after the scaffold gate is approved, or you can talk to the PM to
+            add one now.
+          </EmptyState>
         ) : (
-          <Card className="divide-y divide-border">
-            {project.tickets.map((t) => (
-              <div key={t.id} className="px-4 py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium">{t.title}</div>
-                  <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                    {t.role}
-                  </div>
-                </div>
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  {t.status}
-                </Badge>
-              </div>
-            ))}
-          </Card>
+          <Kanban tickets={project.tickets} />
         )}
       </Section>
+
+      <PmChat projectId={project.id} />
 
       <Section title="Recent agent runs">
         {project.agentRuns.length === 0 ? (
