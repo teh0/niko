@@ -74,7 +74,7 @@ export default async function RunDetailPage({
       {run.error && (
         <Card className="p-4 mb-6 border-red-200 bg-red-50">
           <div className="text-xs font-semibold text-red-800 mb-1">Error</div>
-          <pre className="text-[11px] text-red-700 whitespace-pre-wrap font-mono">
+          <pre className="text-[11px] text-red-700 whitespace-pre-wrap break-all font-mono">
             {run.error}
           </pre>
         </Card>
@@ -195,7 +195,7 @@ function EventBlock({ event }: { event: TranscriptEvent }) {
         <div className="shrink-0 size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-1">
           <Bot className="size-3.5" />
         </div>
-        <Card className="flex-1 p-3.5">
+        <Card className="flex-1 min-w-0 p-3.5">
           <Markdown variant="chat">{event.text}</Markdown>
         </Card>
       </div>
@@ -208,7 +208,7 @@ function EventBlock({ event }: { event: TranscriptEvent }) {
         <div className="shrink-0 size-7 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mt-1">
           <Wrench className="size-3.5 text-amber-700" />
         </div>
-        <Card className="flex-1 p-3 bg-amber-50/40 border-amber-200/60">
+        <Card className="flex-1 min-w-0 p-3 bg-amber-50/40 border-amber-200/60">
           <div className="text-xs font-mono font-semibold text-amber-800 mb-1">
             {event.name}
           </div>
@@ -233,7 +233,7 @@ function EventBlock({ event }: { event: TranscriptEvent }) {
         <div className="shrink-0 size-7 rounded-full bg-muted border border-border flex items-center justify-center mt-1">
           <Wrench className="size-3.5 text-muted-foreground" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <ToolResult content={event.content} isError={event.isError} />
         </div>
       </div>
@@ -246,8 +246,8 @@ function EventBlock({ event }: { event: TranscriptEvent }) {
         <div className="shrink-0 size-7 rounded-full bg-muted border border-border flex items-center justify-center mt-1">
           <User className="size-3.5 text-muted-foreground" />
         </div>
-        <Card className="flex-1 p-3 bg-muted/40">
-          <div className="text-xs whitespace-pre-wrap">{event.text}</div>
+        <Card className="flex-1 min-w-0 p-3 bg-muted/40">
+          <div className="text-xs whitespace-pre-wrap break-words">{event.text}</div>
         </Card>
       </div>
     );

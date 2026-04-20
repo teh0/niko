@@ -209,7 +209,7 @@ function Bubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
           <Bot className="size-3" />
         </div>
       )}
-      <div className="max-w-[85%] space-y-2">
+      <div className="max-w-[85%] min-w-0 space-y-2 break-words">
         <div
           className={cn(
             "rounded-2xl px-3.5 py-2 text-xs leading-relaxed",

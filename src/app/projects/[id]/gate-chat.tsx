@@ -185,7 +185,7 @@ function GateBubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[90%] rounded-xl px-3 py-2 text-xs leading-relaxed",
+          "max-w-[90%] rounded-xl px-3 py-2 text-xs leading-relaxed break-words",
           isUser
             ? "bg-primary text-primary-foreground whitespace-pre-wrap rounded-br-sm"
             : "bg-muted text-foreground rounded-bl-sm",

@@ -191,7 +191,7 @@ function Bubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
       )}
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+          "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed break-words",
           isUser
             ? "bg-primary text-primary-foreground whitespace-pre-wrap rounded-br-sm"
             : "bg-muted text-foreground rounded-bl-sm",

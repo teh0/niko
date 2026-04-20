@@ -28,7 +28,7 @@ export function Markdown({
 }
 
 const contentStyles = cn(
-  "text-sm leading-relaxed text-foreground space-y-3",
+  "text-sm leading-relaxed text-foreground space-y-3 break-words",
   "[&_p]:my-0 [&_p]:leading-relaxed",
   "[&_strong]:font-semibold",
   "[&_em]:italic",
@@ -51,7 +51,7 @@ const contentStyles = cn(
 );
 
 const chatStyles = cn(
-  "text-sm leading-relaxed space-y-2",
+  "text-sm leading-relaxed space-y-2 break-words",
   "[&_p]:my-0 [&_p]:leading-relaxed",
   "[&_strong]:font-semibold",
   "[&_em]:italic",
