@@ -77,10 +77,34 @@ model Gate {
   decidedAt   DateTime?
   decidedBy   String?                      // github login of reviewer
 
+  messages    GateMessage[]                // user↔agent conversation about this gate
+
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   @@index([projectId, status])
+}
+
+// Multi-turn discussion on a gate — user asks questions, agent (the one who
+// produced the gate) answers. Runs read-only; approving is still a separate
+// decision made via the UI buttons or a GitHub PR review.
+model GateMessage {
+  id        String       @id @default(cuid())
+  gateId    String
+  gate      Gate         @relation(fields: [gateId], references: [id], onDelete: Cascade)
+
+  role      GateMsgRole
+  content   String       @db.Text
+
+  createdAt DateTime     @default(now())
+
+  @@index([gateId, createdAt])
+}
+
+enum GateMsgRole {
+  USER
+  AGENT
+  SYSTEM
 }
 
 enum GateKind {

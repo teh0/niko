@@ -2,10 +2,23 @@ import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { GateActions } from "./gate-actions";
+import { GateChat } from "./gate-chat";
+import { GATE_RESPONDER, supportsGateChat } from "@/lib/gate-chat/prompt";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+
+const ROLE_LABEL: Record<string, string> = {
+  PM: "PM",
+  TECH_LEAD: "Tech Lead",
+  DB_EXPERT: "DB Expert",
+  DEV_WEB: "Dev Web",
+  DEV_MOBILE: "Dev Mobile",
+  DEV_BACKEND: "Dev Backend",
+  QA: "QA",
+  RED_TEAM_QA: "Red Team",
+  DEBUG: "Debug",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -56,36 +69,46 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <p className="text-muted-foreground text-sm">No gates yet.</p>
         ) : (
           <Card className="divide-y divide-border">
-            {project.gates.map((g) => (
-              <div
-                key={g.id}
-                className="px-4 py-3 flex items-center justify-between gap-4"
-              >
-                <div className="min-w-0">
-                  <div className="text-sm">
-                    <span className="font-mono text-xs text-muted-foreground mr-2">
-                      {g.kind}
-                    </span>
-                    {g.title}
+            {project.gates.map((g) => {
+              const responder = GATE_RESPONDER[g.kind];
+              const agentLabel = responder ? ROLE_LABEL[responder] : "agent";
+              return (
+                <div key={g.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-sm">
+                        <span className="font-mono text-xs text-muted-foreground mr-2">
+                          {g.kind}
+                        </span>
+                        {g.title}
+                      </div>
+                      {g.prUrl && (
+                        <a
+                          href={g.prUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary flex items-center gap-1 hover:underline mt-0.5"
+                        >
+                          PR #{g.prNumber}
+                          <ExternalLink className="size-3" />
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {g.status === "PENDING" && <GateActions gateId={g.id} />}
+                      <GateBadge status={g.status} decision={g.decision} />
+                    </div>
                   </div>
-                  {g.prUrl && (
-                    <a
-                      href={g.prUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary flex items-center gap-1 hover:underline mt-0.5"
-                    >
-                      PR #{g.prNumber}
-                      <ExternalLink className="size-3" />
-                    </a>
+                  {g.status === "PENDING" && (
+                    <GateChat
+                      gateId={g.id}
+                      agentLabel={agentLabel}
+                      supportsChat={supportsGateChat(g.kind)}
+                    />
                   )}
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {g.status === "PENDING" && <GateActions gateId={g.id} />}
-                  <GateBadge status={g.status} decision={g.decision} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </Card>
         )}
       </Section>
