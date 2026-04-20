@@ -17,7 +17,7 @@ import { Markdown } from "@/components/markdown";
 import { cn } from "@/lib/utils";
 import { AutoRefresh } from "../auto-refresh";
 import { ToolResult } from "./tool-result";
-import { fmtNumber, fmtDateTime } from "@/lib/format";
+import { fmtNumber, fmtDateTime, fmtDuration } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export default async function RunDetailPage({
   const events = flattenTranscript(run.transcript).reverse();
 
   const duration = run.startedAt
-    ? formatDuration(
+    ? fmtDuration(
         (run.endedAt ?? new Date()).getTime() - new Date(run.startedAt).getTime(),
       )
     : null;
@@ -318,10 +318,3 @@ function safeJson(v: unknown): string {
   }
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
-}

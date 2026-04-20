@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AdvanceFlowButton } from "./advance-flow-button";
+import { fmtRelative, fmtDuration } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -202,27 +203,41 @@ export default async function ProjectOverviewPage({
                     : r.status === "RUNNING"
                       ? "text-blue-600"
                       : "text-muted-foreground";
+              const duration =
+                r.startedAt &&
+                fmtDuration(
+                  new Date(r.endedAt ?? new Date()).getTime() -
+                    new Date(r.startedAt).getTime(),
+                );
               return (
                 <li
                   key={r.id}
-                  className="flex items-center justify-between gap-3 py-1.5"
+                  className="flex items-start justify-between gap-3 py-2"
                 >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
                     <Icon
                       className={cn(
-                        "size-4 shrink-0",
+                        "size-4 shrink-0 mt-0.5",
                         color,
                         r.status === "RUNNING" && "animate-spin",
                       )}
                     />
-                    <Badge variant="outline" className="font-mono text-[10px] shrink-0">
-                      {r.role}
-                    </Badge>
-                    <span className="text-sm truncate">{r.task}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="font-mono text-[10px] shrink-0">
+                          {r.role}
+                        </Badge>
+                        <span className="text-sm truncate">{r.task}</span>
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {fmtRelative(r.createdAt)}
+                        {duration && <> · {duration}</>}
+                      </div>
+                    </div>
                   </div>
                   <span
                     className={cn(
-                      "font-mono text-[10px] uppercase tracking-wider shrink-0",
+                      "font-mono text-[10px] uppercase tracking-wider shrink-0 mt-1",
                       color,
                     )}
                   >

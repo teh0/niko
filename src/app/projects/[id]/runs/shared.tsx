@@ -8,7 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { RunErrorDetail } from "./run-error";
-import { fmtNumber } from "@/lib/format";
+import { fmtNumber, fmtDuration, fmtRelative } from "@/lib/format";
 
 export type RunLite = {
   id: string;
@@ -46,7 +46,7 @@ export function RunRow({
   const { Icon, color, bg } = statusStyle(run.status);
   const duration =
     run.startedAt &&
-    formatDuration(
+    fmtDuration(
       new Date(run.endedAt ?? new Date()).getTime() -
         new Date(run.startedAt).getTime(),
     );
@@ -88,7 +88,7 @@ export function RunRow({
             <span className={cn("uppercase tracking-wider font-mono", color)}>
               {run.status.toLowerCase()}
             </span>
-            <span>· {relativeTime(run.createdAt)}</span>
+            <span>· {fmtRelative(run.createdAt)}</span>
             {duration && <span>· {duration}</span>}
             {run.tokensIn != null && run.tokensOut != null && (
               <span>
@@ -132,21 +132,5 @@ function statusStyle(status: string) {
   }
 }
 
-export function relativeTime(date: Date | string): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
-export function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return s % 60 ? `${m}m ${s % 60}s` : `${m}m`;
-}
+// Re-exports so existing imports keep working.
+export { fmtRelative as relativeTime, fmtDuration as formatDuration } from "@/lib/format";
