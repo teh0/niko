@@ -32,11 +32,24 @@ export type NextAction =
 export async function decideNext(projectId: string): Promise<NextAction> {
   const project = await prisma.project.findUniqueOrThrow({
     where: { id: projectId },
-    include: { gates: true, tickets: true },
+    // IMPORTANT: order gates newest-first so `find(kind === X)` always
+    // returns the LATEST gate of that kind. Without this, the flow keeps
+    // re-invoking the producing agent because it keeps looking at a stale
+    // CHANGES_REQUESTED gate while newer PENDING ones sit ignored.
+    include: {
+      gates: { orderBy: { createdAt: "desc" } },
+      tickets: true,
+    },
   });
 
+  const latestGate = (kind: import("@prisma/client").GateKind) =>
+    project.gates.find((g) => g.kind === kind);
+
+  const iterationOf = (kind: import("@prisma/client").GateKind) =>
+    project.gates.filter((g) => g.kind === kind).length + 1;
+
   // 1. No specs yet → run PM.
-  const specsGate = project.gates.find((g) => g.kind === "SPECS");
+  const specsGate = latestGate("SPECS");
   if (!specsGate) {
     return {
       type: "run_agent",
@@ -47,17 +60,16 @@ export async function decideNext(projectId: string): Promise<NextAction> {
   }
   if (specsGate.status === "PENDING") return { type: "wait_for_gate", kind: "SPECS" };
   if (specsGate.decision !== "APPROVED") {
-    // Changes requested → re-run PM with feedback.
     return {
       type: "run_agent",
       role: "PM",
-      task: "Revise the spec based on reviewer feedback.",
+      task: `Revise spec (iteration ${iterationOf("SPECS")}) based on reviewer feedback.`,
       input: { brief: project.brief, feedback: specsGate.feedback },
     };
   }
 
   // 2. No stack plan → Tech Lead plans.
-  const stackGate = project.gates.find((g) => g.kind === "STACK_PLAN");
+  const stackGate = latestGate("STACK_PLAN");
   if (!stackGate) {
     return {
       type: "run_agent",
@@ -71,13 +83,13 @@ export async function decideNext(projectId: string): Promise<NextAction> {
     return {
       type: "run_agent",
       role: "TECH_LEAD",
-      task: "Revise the stack plan based on reviewer feedback.",
+      task: `Revise stack plan (iteration ${iterationOf("STACK_PLAN")}) based on reviewer feedback.`,
       input: { mode: "plan", feedback: stackGate.feedback },
     };
   }
 
   // 3. No scaffold → Tech Lead scaffolds.
-  const scaffoldGate = project.gates.find((g) => g.kind === "SCAFFOLD");
+  const scaffoldGate = latestGate("SCAFFOLD");
   if (!scaffoldGate) {
     return {
       type: "run_agent",
@@ -87,9 +99,17 @@ export async function decideNext(projectId: string): Promise<NextAction> {
     };
   }
   if (scaffoldGate.status === "PENDING") return { type: "wait_for_gate", kind: "SCAFFOLD" };
+  if (scaffoldGate.decision !== "APPROVED") {
+    return {
+      type: "run_agent",
+      role: "TECH_LEAD",
+      task: `Revise scaffold (iteration ${iterationOf("SCAFFOLD")}) based on reviewer feedback.`,
+      input: { mode: "scaffold", feedback: scaffoldGate.feedback },
+    };
+  }
 
   // 4. No data model → DB Expert (only if stack includes a DB).
-  const dataGate = project.gates.find((g) => g.kind === "DATA_MODEL");
+  const dataGate = latestGate("DATA_MODEL");
   const stackPlan = (project.stackPlan as { database?: { engine: string } } | null) ?? null;
   const needsDb = stackPlan?.database && stackPlan.database.engine !== "none";
   if (needsDb && !dataGate) {
@@ -101,6 +121,14 @@ export async function decideNext(projectId: string): Promise<NextAction> {
     };
   }
   if (dataGate && dataGate.status === "PENDING") return { type: "wait_for_gate", kind: "DATA_MODEL" };
+  if (dataGate && dataGate.decision && dataGate.decision !== "APPROVED") {
+    return {
+      type: "run_agent",
+      role: "DB_EXPERT",
+      task: `Revise data model (iteration ${iterationOf("DATA_MODEL")}) based on reviewer feedback.`,
+      input: { mode: "design", feedback: dataGate.feedback },
+    };
+  }
 
   // 5. Break down tickets if none yet, then dispatch.
   if (project.tickets.length === 0) {
