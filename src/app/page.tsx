@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpRight, Folder } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -14,34 +15,44 @@ export default async function ProjectsListPage() {
   });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Projects</h1>
+    <div className="px-6 py-10 max-w-5xl mx-auto">
+      <div className="mb-10">
+        <h1 className="text-3xl font-semibold tracking-tight">Projects</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Every engagement the studio is working on.
+        </p>
       </div>
 
       {projects.length === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-muted-foreground text-sm">
-            No projects yet. Create one to start a studio engagement.
+        <Card className="p-12 text-center border-dashed">
+          <Folder className="mx-auto size-6 text-muted-foreground mb-3" />
+          <p className="text-sm font-medium">No projects yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Start a new project to begin an engagement.
           </p>
         </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-2">
           {projects.map((p) => (
-            <Link key={p.id} href={`/projects/${p.id}`} className="block">
-              <Card className="p-4 hover:bg-card/60 transition-colors">
+            <Link key={p.id} href={`/projects/${p.id}`} className="group block">
+              <Card className="p-4 transition-all hover:border-foreground/20 hover:shadow-sm">
                 <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{p.name}</span>
+                      <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <div className="text-xs text-muted-foreground font-mono mt-0.5">
                       {p.githubOwner}/{p.githubRepo}
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <Badge variant="outline">{p.status}</Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground tabular-nums">
                       {p._count.gates} gates · {p._count.pullRequests} PRs
-                    </span>
+                    </div>
+                    <Badge variant="secondary" className="font-mono text-[10px]">
+                      {p.status}
+                    </Badge>
                   </div>
                 </div>
               </Card>

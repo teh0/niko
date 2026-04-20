@@ -128,7 +128,7 @@ export function GateChat({
         <MessageSquare className="size-3" />
         Discuss with {agentLabel}
         {messages.length > 0 && (
-          <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-muted-shadcn">
+          <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-muted">
             {messages.length}
           </span>
         )}
@@ -175,7 +175,7 @@ export function GateChat({
 function GateBubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
   if (msg.role === "SYSTEM") {
     return (
-      <div className="text-[11px] text-destructive border border-destructive/40 bg-destructive/10 rounded px-2 py-1">
+      <div className="text-[11px] text-destructive border border-destructive/30 bg-destructive/5 rounded-md px-2 py-1">
         {msg.content}
       </div>
     );
@@ -185,10 +185,10 @@ function GateBubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[90%] rounded px-2.5 py-1.5 text-xs",
+          "max-w-[90%] rounded-xl px-3 py-2 text-xs leading-relaxed",
           isUser
-            ? "bg-primary text-primary-foreground whitespace-pre-wrap"
-            : "bg-muted-shadcn/40 border border-border",
+            ? "bg-primary text-primary-foreground whitespace-pre-wrap rounded-br-sm"
+            : "bg-muted text-foreground rounded-bl-sm",
         )}
       >
         {isUser ? (
@@ -198,7 +198,7 @@ function GateBubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
             className={cn(
               "space-y-1 [&_p]:my-0 [&_strong]:font-semibold",
               "[&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4",
-              "[&_code]:bg-muted-shadcn [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[10px]",
+              "[&_code]:bg-background [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[10px] [&_code]:border [&_code]:border-border",
               "[&_a]:text-primary [&_a]:underline",
             )}
           >

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Send } from "lucide-react";
+import { Send, Bot } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
@@ -36,9 +36,6 @@ export function IntakeChat({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, pending]);
 
-  // Defensive dedup: if the same (role, content) shows up twice in a row
-  // — which can happen when the optimistic user bubble overlaps with a
-  // re-fetch — keep only the first occurrence.
   const visibleMessages = useMemo(() => {
     const out: Msg[] = [];
     for (const m of messages) {
@@ -128,7 +125,7 @@ export function IntakeChat({
 
   return (
     <Card className="flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
         {visibleMessages.map((m) => (
           <Bubble key={m.id} msg={m} />
         ))}
@@ -139,23 +136,25 @@ export function IntakeChat({
       </div>
 
       {readyToFinalize ? (
-        <div className="border-t border-border p-4 bg-muted-shadcn/10 space-y-3">
-          <div className="text-sm">
-            The agent thinks it has enough info. Review the brief in the last message
-            and kick off the project.
+        <div className="border-t border-border p-4 bg-muted/40 space-y-3">
+          <div className="text-sm font-medium">
+            Ready to kick off the project.
           </div>
+          <p className="text-xs text-muted-foreground">
+            Review the brief in the last message. Once you confirm, engineering starts.
+          </p>
           <div className="flex gap-2 items-center">
             <Input
               value={installationId}
               onChange={(e) => setInstallationId(e.target.value)}
               placeholder="GitHub App installation id (optional)"
-              className="font-mono"
+              className="font-mono text-xs"
             />
             <Button onClick={finalize}>Create project</Button>
           </div>
         </div>
       ) : (
-        <form onSubmit={send} className="border-t border-border p-3 flex gap-2">
+        <form onSubmit={send} className="border-t border-border p-3 flex gap-2 bg-background">
           <Input
             name="content"
             autoComplete="off"
@@ -178,20 +177,25 @@ export function IntakeChat({
 function Bubble({ msg, streaming }: { msg: Msg; streaming?: boolean }) {
   if (msg.role === "SYSTEM") {
     return (
-      <div className="text-xs text-destructive border border-destructive/40 bg-destructive/10 rounded-md px-3 py-2">
+      <div className="text-xs text-destructive border border-destructive/30 bg-destructive/5 rounded-md px-3 py-2">
         {msg.content}
       </div>
     );
   }
   const isUser = msg.role === "USER";
   return (
-    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn("flex gap-2", isUser ? "justify-end" : "justify-start")}>
+      {!isUser && (
+        <div className="shrink-0 size-7 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-0.5">
+          <Bot className="size-3.5" />
+        </div>
+      )}
       <div
         className={cn(
-          "max-w-[85%] rounded-md px-3 py-2 text-sm",
+          "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
           isUser
-            ? "bg-primary text-primary-foreground whitespace-pre-wrap"
-            : "bg-card border border-border",
+            ? "bg-primary text-primary-foreground whitespace-pre-wrap rounded-br-sm"
+            : "bg-muted text-foreground rounded-bl-sm",
         )}
       >
         {isUser ? (
@@ -211,24 +215,23 @@ function MarkdownContent({ children }: { children: string }) {
   return (
     <div
       className={cn(
-        // Prose-like styling built from Tailwind — keeps tight for a chat bubble.
-        "space-y-2 [&>p]:leading-relaxed [&_p]:my-0",
-        "[&_strong]:font-semibold [&_strong]:text-foreground",
+        "space-y-2 [&_p]:my-0 [&_p]:leading-relaxed",
+        "[&_strong]:font-semibold",
         "[&_em]:italic",
         "[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1",
         "[&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1",
         "[&_li]:leading-relaxed",
-        "[&_code]:bg-muted-shadcn [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono",
-        "[&_pre]:bg-muted-shadcn [&_pre]:p-2 [&_pre]:rounded [&_pre]:overflow-x-auto [&_pre]:my-2",
-        "[&_pre_code]:bg-transparent [&_pre_code]:p-0",
-        "[&_a]:text-primary [&_a]:underline",
+        "[&_code]:bg-background [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_code]:border [&_code]:border-border",
+        "[&_pre]:bg-background [&_pre]:border [&_pre]:border-border [&_pre]:p-3 [&_pre]:rounded-md [&_pre]:overflow-x-auto [&_pre]:my-2",
+        "[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:border-0",
+        "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2",
         "[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
         "[&_h1]:text-base [&_h1]:font-semibold [&_h1]:mt-3 [&_h1]:mb-1",
         "[&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-1",
         "[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1",
         "[&_hr]:border-border [&_hr]:my-3",
         "[&_table]:w-full [&_table]:text-xs [&_table]:border [&_table]:border-border",
-        "[&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:font-semibold",
+        "[&_th]:border [&_th]:border-border [&_th]:px-2 [&_th]:py-1 [&_th]:font-semibold [&_th]:bg-muted/40",
         "[&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1",
       )}
     >

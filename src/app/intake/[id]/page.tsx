@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
+import { Check } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { IntakeChat } from "./chat";
 import { INTAKE_COVERAGE } from "@/lib/intake/prompt";
 import { Card } from "@/components/ui/card";
-import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,11 @@ export default async function IntakePage({ params }: { params: Promise<{ id: str
   });
   if (!session) notFound();
 
+  const coverage = (session.coverage as Record<string, { done?: boolean }> | null) ?? {};
+  const doneCount = INTAKE_COVERAGE.filter((c) => coverage[c.slug]?.done).length;
+
   return (
-    <div className="grid grid-cols-[1fr_280px] gap-6 p-6 max-w-6xl mx-auto h-[calc(100vh-64px)]">
+    <div className="grid grid-cols-[1fr_300px] gap-6 px-6 py-6 max-w-6xl mx-auto h-[calc(100vh-56px)]">
       <IntakeChat
         sessionId={session.id}
         initialMessages={session.messages.map((m) => ({
@@ -29,36 +32,46 @@ export default async function IntakePage({ params }: { params: Promise<{ id: str
         initialReady={session.status === "READY_TO_FINALIZE"}
       />
 
-      <Card className="p-4 h-fit sticky top-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-          Coverage
-        </h2>
-        <ul className="space-y-2 text-xs">
-          {INTAKE_COVERAGE.map((item) => {
-            const cov = (session.coverage as Record<string, { done?: boolean }> | null)?.[
-              item.slug
-            ];
-            const done = cov?.done === true;
-            return (
-              <li key={item.slug} className="flex items-start gap-2">
-                <span
-                  className={cn(
-                    "mt-0.5 inline-flex items-center justify-center size-4 rounded-sm border shrink-0",
-                    done
-                      ? "bg-primary border-primary text-primary-foreground"
-                      : "border-border",
-                  )}
-                >
-                  {done && <Check className="size-3" strokeWidth={3} />}
-                </span>
-                <span className={done ? "text-foreground" : "text-muted-foreground"}>
-                  {item.label}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+      <aside className="space-y-4 sticky top-20 h-fit">
+        <Card className="p-5">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Coverage
+            </h2>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {doneCount} / {INTAKE_COVERAGE.length}
+            </span>
+          </div>
+          <div className="h-1 bg-muted rounded-full overflow-hidden mb-5">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{ width: `${(doneCount / INTAKE_COVERAGE.length) * 100}%` }}
+            />
+          </div>
+          <ul className="space-y-2.5 text-xs">
+            {INTAKE_COVERAGE.map((item) => {
+              const done = coverage[item.slug]?.done === true;
+              return (
+                <li key={item.slug} className="flex items-start gap-2">
+                  <span
+                    className={cn(
+                      "mt-0.5 inline-flex items-center justify-center size-4 rounded border shrink-0 transition-colors",
+                      done
+                        ? "bg-primary border-primary text-primary-foreground"
+                        : "border-border bg-background",
+                    )}
+                  >
+                    {done && <Check className="size-3" strokeWidth={3} />}
+                  </span>
+                  <span className={done ? "text-foreground" : "text-muted-foreground"}>
+                    {item.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      </aside>
     </div>
   );
 }

@@ -18,21 +18,29 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${lexend.variable}`}>
+    <html lang="en" className={lexend.variable}>
       <body className="font-sans">
-        <div className="min-h-screen flex flex-col">
-          <header className="border-b border-border px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <Link href="/" className="font-mono text-primary text-sm">
-                niko<span className="text-foreground">.studio</span>
+        <div className="min-h-screen flex flex-col bg-background">
+          <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-md px-6 h-14 flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <Link href="/" className="flex items-center gap-2">
+                <span className="flex items-center justify-center size-6 rounded-md bg-primary text-primary-foreground text-xs font-semibold">
+                  N
+                </span>
+                <span className="text-sm font-semibold tracking-tight">
+                  niko<span className="text-muted-foreground font-normal">.studio</span>
+                </span>
               </Link>
-              <nav className="flex gap-4 text-sm text-muted-foreground">
-                <Link href="/" className="hover:text-foreground transition-colors">
+              <nav className="flex gap-6 text-sm">
+                <Link
+                  href="/"
+                  className="text-foreground/70 hover:text-foreground transition-colors"
+                >
                   Projects
                 </Link>
               </nav>
             </div>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="h-8">
               <Link href="/intake/new">
                 <Plus className="size-4" />
                 New project
