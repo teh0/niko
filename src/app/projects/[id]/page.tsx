@@ -43,6 +43,15 @@ export default async function ProjectOverviewPage({
     blocked: project.tickets.filter((t) => t.status === "BLOCKED").length,
   };
 
+  // "Blocked" = latest run is FAILED, no PENDING gate, nothing running/queued.
+  // In that state the flow can't advance on its own — surface it to the user.
+  const latestRun = project.agentRuns[0];
+  const anyActive = project.agentRuns.some(
+    (r) => r.status === "RUNNING" || r.status === "QUEUED",
+  );
+  const flowBlocked =
+    latestRun?.status === "FAILED" && pendingGates.length === 0 && !anyActive;
+
   return (
     <div className="px-8 py-8 max-w-4xl space-y-8">
       <header>
@@ -51,6 +60,32 @@ export default async function ProjectOverviewPage({
           Overview of the studio&rsquo;s work on this project.
         </p>
       </header>
+
+      {flowBlocked && latestRun && (
+        <Card className="p-4 border-red-200 bg-red-50">
+          <div className="flex items-start gap-3">
+            <XCircle className="size-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-red-800">
+                Flow is blocked
+              </div>
+              <p className="mt-0.5 text-xs text-red-700">
+                The {latestRun.role} agent failed and no other work is queued.
+                Retry from the runs page, or talk to the PM if you want to
+                rescope.
+              </p>
+              <div className="mt-2">
+                <Link
+                  href={`/projects/${id}/runs`}
+                  className="text-xs font-medium text-red-700 hover:text-red-900 underline underline-offset-2"
+                >
+                  Go to runs →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <StatCard

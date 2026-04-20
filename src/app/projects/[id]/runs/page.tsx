@@ -148,7 +148,13 @@ function RunRow({
             </span>
           )}
         </div>
-        {run.error && <RunErrorDetail error={run.error} />}
+        {run.error && (
+          <RunErrorDetail
+            error={run.error}
+            runId={run.id}
+            retryable={run.status === "FAILED"}
+          />
+        )}
       </div>
     </div>
   );
