@@ -39,10 +39,6 @@ export class DebugAgent extends BaseAgent<DebugOutput> {
   // the diagnostic report at `.niko/blockers/`.
   readonly allowedTools = ["Read", "Grep", "Glob", "WebFetch", "Bash", "Write"];
 
-  protected maxTurns(): number {
-    return 25;
-  }
-
   readonly systemPrompt = `
 You are the Debug agent at Niko. You are invoked only when another agent
 has thrown in the towel after hitting the same error three times. You are

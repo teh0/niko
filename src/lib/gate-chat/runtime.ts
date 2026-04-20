@@ -92,10 +92,7 @@ export async function* streamGateReply(
   const options: Options = {
     cwd,
     systemPrompt,
-    // Reformulating / summarizing a PR realistically needs a dozen Read
-    // calls on the scaffold + maybe Context7 lookups. 8 was too tight
-    // (observed 'error_max_turns' with empty reply).
-    maxTurns: 25,
+    maxTurns: 100,
     // Read-only toolset — Read/Grep/Glob so the agent can cite files.
     // No Edit/Write/Bash — chat must not mutate the repo.
     allowedTools: ["Read", "Grep", "Glob", "mcp__context7__*"],

@@ -180,11 +180,14 @@ export abstract class BaseAgent<TOutput = unknown> {
   }
 
   /**
-   * Hard cap on tool-call turns. Tight limits keep agents from meandering
-   * (which correlates strongly with hallucination). Tune per role.
+   * Hard cap on tool-call turns. 100 is the project-wide default —
+   * enough for the biggest legitimate task (Tech Lead scaffolding a
+   * full monorepo, QA running a full test suite, Debug chasing a
+   * long stack). Still a kill switch for runaway loops.
+   * Roles can override if they genuinely need more.
    */
   protected maxTurns(): number {
-    return 30;
+    return 100;
   }
 
   /** Final system prompt sent to Claude — preamble + agent-specific prompt. */

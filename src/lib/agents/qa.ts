@@ -21,10 +21,6 @@ export class QAAgent extends BaseAgent<QAOutput> {
     return true;
   }
 
-  protected maxTurns(): number {
-    return 30;
-  }
-
   readonly systemPrompt = `
 You are the QA Engineer of Niko studio. You are the last line of defense
 before a PR gets shipped to the human reviewer.

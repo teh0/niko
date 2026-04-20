@@ -9,10 +9,6 @@ export class DevMobileAgent extends BaseAgent<DevOutput> {
     return true;
   }
 
-  protected maxTurns(): number {
-    return 45;
-  }
-
   readonly systemPrompt = `
 You are the Mobile Engineer of Niko studio. Your stack: **Flutter** (latest
 stable, Dart, Material 3 by default, Riverpod for state unless the project

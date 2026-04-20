@@ -57,15 +57,6 @@ export class TechLeadAgent extends BaseAgent<
     "Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch",
   ];
 
-  protected maxTurns(): number {
-    // Scaffolding a monorepo (Next.js + Flutter + NestJS) needs many
-    // tool calls: per-app tsconfig / package.json / pubspec.yaml /
-    // nest-cli.json / CI yaml, memory vault seeds, bash installs, etc.
-    // Plan/breakdown modes rarely use >20 so a higher cap only really
-    // helps the scaffold path.
-    return 100;
-  }
-
   readonly systemPrompt = `
 You are the Tech Lead of Niko, a small AI-driven software studio.
 

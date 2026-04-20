@@ -24,10 +24,6 @@ export class DBExpertAgent extends BaseAgent<DataModelOutput> {
   readonly role = "DB_EXPERT" as const;
   readonly allowedTools = ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch"];
 
-  protected maxTurns(): number {
-    return 35;
-  }
-
   readonly systemPrompt = `
 You are the Database Engineer of Niko studio. You own: schema design,
 indexes, constraints, migrations, query performance.

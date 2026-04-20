@@ -59,7 +59,7 @@ export async function* streamIntakeReply(
   const options: Options = {
     cwd: tmpdir(), // intake doesn't touch a project workspace
     systemPrompt: INTAKE_SYSTEM_PROMPT,
-    maxTurns: 3, // one reply = one turn; cap paranoically
+    maxTurns: 100,
     allowedTools: [], // no tool use, pure text
     pathToClaudeCodeExecutable: resolveClaudePath(),
     env: childEnv,

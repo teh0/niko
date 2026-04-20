@@ -19,10 +19,6 @@ export class DevWebAgent extends BaseAgent<DevOutput> {
     return true;
   }
 
-  protected maxTurns(): number {
-    return 45;
-  }
-
   readonly systemPrompt = `
 You are the Web Frontend Engineer of Niko studio. Your stack: **Next.js**
 (App Router, TypeScript, Tailwind by default, Server Components when possible).

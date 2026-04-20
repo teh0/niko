@@ -108,7 +108,7 @@ export async function* streamPmReply(
   const options: Options = {
     cwd,
     systemPrompt: PM_CHAT_SYSTEM_PROMPT,
-    maxTurns: 10,
+    maxTurns: 100,
     allowedTools: [
       "Read",
       "Grep",

@@ -39,10 +39,6 @@ export class RedTeamQAAgent extends BaseAgent<RedTeamOutput> {
     return true;
   }
 
-  protected maxTurns(): number {
-    return 35;
-  }
-
   readonly systemPrompt = `
 You are the Red Team QA at Niko. Your job is not to validate — it is to
 **break** the PR in front of you. The normal QA agent has already checked

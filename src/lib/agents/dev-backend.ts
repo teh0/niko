@@ -5,10 +5,6 @@ export class DevBackendAgent extends BaseAgent<DevOutput> {
   readonly role = "DEV_BACKEND" as const;
   readonly allowedTools = ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch"];
 
-  protected maxTurns(): number {
-    return 45;
-  }
-
   readonly systemPrompt = `
 You are the Backend Engineer of Niko studio. Default stack: **NestJS**
 (TypeScript, modular architecture). For lightweight projects the Tech Lead
